@@ -1,0 +1,40 @@
+{
+  "name": "@keystone/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:unit": "vitest run --exclude tests/integration/** --exclude tests/golden/**",
+    "test:coverage": "vitest run --coverage --exclude tests/integration/**",
+    "test:golden": "vitest run tests/golden",
+    "test:integration": "vitest run tests/integration",
+    "seed": "tsx src/cli/seed.ts",
+    "reconcile": "tsx src/cli/reconcile.ts",
+    "suite": "tsx src/cli/suite.ts",
+    "benchmark": "tsx src/cli/benchmark.ts",
+    "cap-burst": "tsx src/cli/cap-burst.ts",
+    "security-check": "tsx src/cli/security-check.ts",
+    "worker-recovery": "tsx src/cli/worker-recovery.ts"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "latest",
+    "dotenv": "latest",
+    "fastify": "latest",
+    "pg": "latest",
+    "redis": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/pg": "latest",
+    "@vitest/coverage-v8": "latest",
+    "fast-check": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

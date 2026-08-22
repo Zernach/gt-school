@@ -1,0 +1,9 @@
+{
+  "version": "payment-amounts-v1",
+  "currency": "usd",
+  "amounts_cents": {
+    "fee": 10000,
+    "deposit": 50000,
+    "tuition": 250000
+  }
+}

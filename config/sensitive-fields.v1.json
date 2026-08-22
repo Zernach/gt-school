@@ -1,0 +1,18 @@
+{
+  "version": "sensitive-fields-v1",
+  "fields": [
+    "legal_first_name",
+    "legal_last_name",
+    "date_of_birth",
+    "government_id",
+    "student_id",
+    "payer_email",
+    "billing_owner_email",
+    "enrollment_status",
+    "deal_status",
+    "payment_status",
+    "marketing_consent",
+    "communication_opt_out",
+    "privacy_state"
+  ]
+}

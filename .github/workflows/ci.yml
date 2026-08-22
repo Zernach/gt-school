@@ -1,0 +1,62 @@
+name: Keystone CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keystone-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run seed -- --seed 424242
+      - name: Golden files remain deterministic
+        run: git diff --exit-code -- golden
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run test:ratio
+      - run: npm run test:golden
+      - run: npm run build
+      - run: npm run compose:config
+
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: static-and-unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run seed -- --seed 424242
+      - run: npm run compose:up
+      - run: npm run test:security
+      - run: npm run test:worker-recovery
+      - run: npm run test:integration
+      - run: npm run suite
+      - run: npm run test:spend-cap
+      - run: npm run benchmark
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Capture service logs on failure
+        if: failure()
+        run: ./backend/docker/compose.sh logs --no-color api worker init postgres queue frontend
+      - name: Stop ephemeral stack
+        if: always()
+        run: ./backend/docker/compose.sh down

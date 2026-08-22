@@ -1,0 +1,24 @@
+{
+  "entity_id": "entity:0338d5d7-d346-49ae-b8ad-02157e262e26",
+  "display_name": "Avery Rivera",
+  "resolution_status": "linked",
+  "match_method": "hard_external_id",
+  "match_score_bp": 9000,
+  "summary": {
+    "student_id": "0338d5d7-d346-49ae-b8ad-02157e262e26",
+    "registered": true,
+    "enrollment_stage": "registered",
+    "paid": true,
+    "payment_statuses": ["paid"],
+    "crm_stage": "closed_won",
+    "crm_contact_ids": ["crm-424242-00800"],
+    "payment_ids": ["pay-424242-00800-primary"]
+  },
+  "links": [
+    { "source_kind": "app", "entity_kind": "enrollment", "source_id": "4770ffea-5b6f-4cf3-8267-195470e4bdf9" },
+    { "source_kind": "app", "entity_kind": "student", "source_id": "0338d5d7-d346-49ae-b8ad-02157e262e26" },
+    { "source_kind": "crm", "entity_kind": "contact", "source_id": "crm-424242-00800" },
+    { "source_kind": "crm", "entity_kind": "deal", "source_id": "deal-424242-00800" },
+    { "source_kind": "payments", "entity_kind": "payment", "source_id": "pay-424242-00800-primary" }
+  ]
+}

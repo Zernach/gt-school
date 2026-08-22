@@ -14,7 +14,7 @@ else
   RESET=""
 fi
 
-MENU_ITEMS=("Start" "Build" "Deploy backend" "Deploy frontend" "Exit")
+MENU_ITEMS=("Start stack" "Build" "Verify" "Show status" "Exit")
 
 print_plain_menu() {
   printf '\n%sProject control%s\n' "$ROYAL_PURPLE" "$RESET"
@@ -84,14 +84,20 @@ start_backend() {
     return 1
   fi
 
-  "$BACKEND_COMPOSE" up --detach --wait
+  "$BACKEND_COMPOSE" up --detach --build --wait
 }
 
-run_placeholder() {
-  local label="$1"
-  printf '\n%s%s is not implemented yet.%s\n' "$ROYAL_PURPLE" "$label" "$RESET"
-  printf '%sUpdate %s or add project-specific scripts in %s.%s\n\n' \
-    "$ARCTIC_CYAN" "$0" "$ROOT_DIR" "$RESET"
+build_project() {
+  npm --prefix "$ROOT_DIR" run build
+  "$BACKEND_COMPOSE" build
+}
+
+verify_project() {
+  npm --prefix "$ROOT_DIR" run lint
+  npm --prefix "$ROOT_DIR" run typecheck
+  npm --prefix "$ROOT_DIR" run test
+  npm --prefix "$ROOT_DIR" run test:golden
+  "$BACKEND_COMPOSE" config --quiet
 }
 
 run_choice() {
@@ -100,18 +106,13 @@ run_choice() {
       start_backend
       ;;
     2)
-      run_placeholder "Build"
+      build_project
       ;;
     3)
-      if [[ -s "$ROOT_DIR/scripts/deploy_backend.sh" ]]; then
-        bash "$ROOT_DIR/scripts/deploy_backend.sh"
-      else
-        run_placeholder "Backend deploy"
-      fi
+      verify_project
       ;;
     4)
-      printf '\n%sFrontend deploy notes: %s/scripts/deploy_frontend.sh%s\n\n' \
-        "$ARCTIC_CYAN" "$ROOT_DIR" "$RESET"
+      "$BACKEND_COMPOSE" ps
       ;;
     5)
       exit 0

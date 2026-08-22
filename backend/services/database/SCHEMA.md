@@ -1,28 +1,80 @@
-# Database Schema
+# Keystone database schema
 
-> [!IMPORTANT]
-> pgvector is a first-class database capability, not an optional future add-on.
-> Preserve `vector` extension support, model/dimension metadata, and vector-index
-> strategy whenever designing search, recommendation, retrieval, or AI features.
+PostgreSQL 16 is Keystone's system of record. Redis is delivery transport only. `init/001-enable-pgvector.sql` enables pgvector for the optional semantic-grouping stretch, but this MVP stores no embeddings and makes no vector-search claim; a future vector migration must name its model, fixed dimension, distance operator, index, lineage, refresh, and deletion policy before adding a vector column.
 
-The initial database volume enables the extension through
-`init/001-enable-pgvector.sql`. Initialization SQL runs only when PostgreSQL
-creates a new volume; application schema changes belong in `migrations/` and
-must be safe for existing databases.
+## Ownership and roles
 
-For every vector-bearing table, document and enforce:
+- The Compose `POSTGRES_USER` owns migrations and fixture loading and is available only to the one-shot `init` service.
+- `keystone_runtime` is used by API/worker. It has public-schema application DML, sequence use, and `SELECT` on `source_app`.
+- Runtime `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, references, and triggers are revoked across `source_app`.
+- Runtime update/delete/truncate are also revoked on immutable `source_records`, `field_observations`, and `audit_events`.
+- Postgres is not published to the host by tracked Compose. For inspection, run `../../docker/compose.sh exec postgres psql` with the configured local owner, or add an explicit ignored local port override.
 
-- embedding model and exact vector dimensions (for example, `vector(1536)`)
-- distance metric and query operator (`<=>`, `<->`, or `<#>`)
-- index type and rationale (`hnsw` or `ivfflat`), plus its operational tradeoffs
-- source content, chunk/version lineage, refresh policy, and deletion behavior
+## Source and synchronization
 
-Do not silently replace vector search with JSON, text matching, or Redis data.
-Keep vectors and their relational metadata in PostgreSQL unless a deliberate,
-documented architecture change says otherwise.
+| Table | Contract |
+|---|---|
+| `source_app.students`, `source_app.enrollments` | Synthetic App-DB source keyed by seed/generation/source ID; runtime SELECT-only. |
+| `source_app.fixture_manifests` | Loaded generator manifest per seed. |
+| `sync_runs` | Idempotent top-level sync state, source availability, summary, structured terminal code. |
+| `source_runs` | One terminal attempt summary per source and sync with counts, latency, and safe error detail. |
+| `source_snapshots` | Immutable staged snapshot identity, schema/adapter version, completeness, counts, payload hash. |
+| `active_snapshots` | Exactly one active pointer per tenant/source. Application logic advances all required sources together only after a complete cross-source run. |
+| `source_records` | Immutable occurrence-aware raw mirror with payload hash, source-observed time, and ingest time. |
+| `field_observations` | Raw and normalized material value, normalization version, transformation trace, and source time. |
+| `fixture_rejections` | Structured synthetic adapter rejects without raw PII logging. |
 
-Describe tables, relationships, constraints, indexes, and migration notes below.
+`source_records` is unique on `(snapshot_id, entity_kind, source_id, occurrence)`. This retains duplicate payments without collapsing them. JSONB is used only for source payload/evidence, not as a replacement for relational identity or vector behavior.
 
-PostgreSQL is intentionally available only to services in this Compose project.
-For local inspection, use `../../docker/compose.sh exec postgres psql -U app -d app`
-or add a host-port mapping in `../../docker/compose.local.yaml`.
+## Canonical identity and lineage
+
+| Table | Contract |
+|---|---|
+| `canonical_entities` | Tenant-scoped unified students, leads, and unlinked payments with deterministic match status/score and cross-source summary. |
+| `entity_links` | Each immutable source record's canonical target, match method, score, evidence, and rule version. |
+| `households` | Hashed normalized guardian-email grouping. |
+| `household_memberships` | Many child entities per household; household identity never merges siblings. |
+
+Entity API queries join links through `active_snapshots`, so historical syncs do not duplicate the current view.
+
+## Invariants and conflicts
+
+| Table | Contract |
+|---|---|
+| `invariant_runs` | Rule-set version, exact source availability, status, and pass/fail/unchecked/error totals. |
+| `invariant_results` | Per-rule, per-entity verdict and evidence; conflict key when failed. |
+| `conflicts` | Stable conflict identity, sources/fields/entities/evidence, status, generation, and oscillation count. |
+
+Conflicts are unique by tenant and stable key. A complete run resolves active keys absent from the new set, including the all-clean case; partial runs never resolve on missing evidence. Reappearance increments oscillation count, crossing the configured threshold changes the conflict to `oscillation_hold` with an append-only audit event, and proposal action fingerprints prevent repeat proposals.
+
+## Jobs, proposals, spend, and audit
+
+| Table | Contract |
+|---|---|
+| `jobs` | Durable idempotency key, payload, request correlation, stream ID, bounded attempts/backoff, result, and terminal state. |
+| `proposals` | Stable action fingerprint, evidence, confidence/signals, sensitive fields/hold, integer costs, version, explicit review status. |
+| `proposal_decisions` | Reviewer decision, reason, actor, and proposal version. |
+| `spend_buckets` | Tenant/UTC-day cap, reserved, actual, released; checks prevent negative or over-cap accounting. |
+| `spend_runs` | Per-job cap and accounting. |
+| `spend_reservations` | Unique action reservation, worst case, actual, provider-call timestamp, and settlement state. |
+| `audit_events` | Append-only correlated action log with privacy-safe metadata and content hash. |
+| `alert_events` | Observable severity/message/metadata; spend-cap stop uses `critical`. |
+
+Spend rows use `bigint` integer microcents. Reservations lock day and run ledgers before any provider call. Proposals cannot reference a different tenant's conflict; decisions cannot reference another tenant's proposal.
+
+## Indexes
+
+- scoped source lookup and field-lineage lookup;
+- GIN on mirrored payloads and conflict source arrays;
+- tenant/entity/update ordering for canonical queries;
+- tenant/verdict/rule for invariant inspection;
+- dashboard conflict status/type/time ordering;
+- proposal status/confidence/time ordering;
+- ready-job status/next-attempt ordering; and
+- audit object/time ordering.
+
+Query pagination uses indexed stable ordering and opaque cursors. Benchmark the actual seeded plan before changing indexes.
+
+## Migration policy
+
+`migrations/001_keystone_core.sql` is immutable once applied. The runner records SHA-256 checksums in `schema_migrations` and aborts if an applied file changes. All evolution is an additive, validated next-numbered migration; initialization scripts are never a migration substitute. Do not delete data or volumes as a schema-change shortcut.

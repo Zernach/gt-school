@@ -1,0 +1,11 @@
+{
+  "version": "prices-v1",
+  "currency": "USD_MICROCENTS",
+  "models": {
+    "keystone-deterministic-v1": {
+      "input_per_1000_tokens": 1,
+      "output_per_1000_tokens": 1,
+      "maximum_call_cost": 10
+    }
+  }
+}

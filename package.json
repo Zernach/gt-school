@@ -1,7 +1,48 @@
 {
-  "name": "gt-school-",
+  "name": "keystone-reconciliation",
+  "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "backend/services/api",
+    "frontend"
+  ],
   "scripts": {
-    "start": "bash scripts/start.sh"
+    "start": "bash scripts/start.sh",
+    "install:all": "npm install",
+    "dev": "concurrently --kill-others-on-fail --names api,frontend \"npm run dev --workspace @keystone/api\" \"npm run dev --workspace @keystone/frontend\"",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "test:unit": "npm run test:unit --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:ratio": "node scripts/check-test-ratio.mjs",
+    "test": "npm run test:unit && npm run test:ratio",
+    "seed": "npm run seed --workspace @keystone/api --",
+    "reconcile": "npm run reconcile --workspace @keystone/api --",
+    "suite": "npm run suite --workspace @keystone/api --",
+    "test:golden": "npm run test:golden --workspace @keystone/api --",
+    "test:integration": "npm run test:integration --workspace @keystone/api --",
+    "test:spend-cap": "./backend/docker/compose.sh run --rm -T init node dist/cli/cap-burst.js",
+    "test:security": "./backend/docker/compose.sh run --rm -T init node dist/cli/security-check.js",
+    "test:worker-recovery": "bash scripts/test-worker-recovery.sh",
+    "test:e2e": "playwright test",
+    "benchmark": "npm run benchmark --workspace @keystone/api --",
+    "compose:config": "./backend/docker/compose.sh config --quiet",
+    "compose:up": "./backend/docker/compose.sh up --build --wait"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "latest",
+    "@playwright/test": "latest",
+    "concurrently": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "globals": "latest",
+    "jsdom": "29.1.1",
+    "typescript-eslint": "latest"
   }
 }

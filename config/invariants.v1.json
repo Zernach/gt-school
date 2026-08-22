@@ -1,0 +1,19 @@
+{
+  "version": "invariants-v1",
+  "rules": [
+    {"id":"C1","version":"1.0.0","type":"paid_but_no_deal","dependencies":["crm","app","payments"],"sensitivity":"non_sensitive"},
+    {"id":"C2","version":"1.0.0","type":"payment_with_no_person","dependencies":["crm","app","payments"],"sensitivity":"non_sensitive"},
+    {"id":"C3","version":"1.0.0","type":"duplicate_by_email","dependencies":["crm"],"sensitivity":"identity"},
+    {"id":"C4","version":"1.0.0","type":"cross_source_email_mismatch","dependencies":["crm","app"],"sensitivity":"identity"},
+    {"id":"C5","version":"1.0.0","type":"required_source_missing","dependencies":["crm","app","payments"],"sensitivity":"non_sensitive"},
+    {"id":"C6","version":"1.0.0","type":"material_field_disagreement","dependencies":["crm","app"],"sensitivity":"non_sensitive"},
+    {"id":"C7","version":"1.0.0","type":"enrolled_but_unpaid","dependencies":["app","payments"],"sensitivity":"financial_status"},
+    {"id":"C8","version":"1.0.0","type":"dropped_sibling","dependencies":["crm","app","payments"],"sensitivity":"non_sensitive"},
+    {"id":"C9","version":"1.0.0","type":"stale_crm_pointer","dependencies":["crm","app"],"sensitivity":"non_sensitive"},
+    {"id":"C10","version":"1.0.0","type":"merge_collapsed_record","dependencies":["crm","app"],"sensitivity":"identity"},
+    {"id":"C11","version":"1.0.0","type":"duplicate_payment","dependencies":["payments"],"sensitivity":"billing_owner"},
+    {"id":"C12","version":"1.0.0","type":"wrong_amount_payment","dependencies":["payments"],"sensitivity":"financial_status"},
+    {"id":"C13","version":"1.0.0","type":"refund_not_reflected","dependencies":["app","payments"],"sensitivity":"financial_status"},
+    {"id":"C14","version":"1.0.0","type":"sensitive_field_only_fix","dependencies":["crm","payments"],"sensitivity":"billing_owner"}
+  ]
+}
