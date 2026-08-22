@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Backend Service"
+  short_description: "Safely add an agnostic backend service"
+  default_prompt: "Use $add-backend-service to gather context and safely add a complete backend service."

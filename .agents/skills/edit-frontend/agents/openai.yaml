@@ -1,0 +1,4 @@
+interface:
+  display_name: "Edit Frontend"
+  short_description: "Apply consistent dark frontend design patterns"
+  default_prompt: "Use $edit-frontend to make a polished, accessible frontend change that follows the project design system."

@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+.venv/
+dist/
+build/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+!backend/docker/.env.example
+backend/docker/compose.local.yaml

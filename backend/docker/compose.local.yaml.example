@@ -1,0 +1,13 @@
+# Copy this file to compose.local.yaml for developer-machine overrides only.
+# Keep language-specific API source and its durable build configuration tracked
+# with the project in compose.yaml; do not put team requirements in this file.
+services: {}
+
+# Example: uncomment to publish internal services for local inspection.
+# services:
+#   postgres:
+#     ports:
+#       - "5432:5432"
+#   queue:
+#     ports:
+#       - "6379:6379"

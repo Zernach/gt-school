@@ -1,0 +1,7 @@
+{
+  "name": "gt-school-",
+  "private": true,
+  "scripts": {
+    "start": "bash scripts/start.sh"
+  }
+}
