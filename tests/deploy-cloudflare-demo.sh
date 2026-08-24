@@ -57,6 +57,8 @@ EOF
 chmod +x "$tmp_dir/bin/git" "$tmp_dir/bin/npm" "$tmp_dir/bin/curl" "$tmp_dir/bin/sleep" "$tmp_dir/zprofile-runner"
 
 log_file="$tmp_dir/commands.log"
+grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/bootstrap_cloudflare_pages.sh"
+grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 run_release() {
   GT_SCHOOL_TEST_LOG="$log_file" \
     GT_SCHOOL_TEST_SHA="$source_sha" \

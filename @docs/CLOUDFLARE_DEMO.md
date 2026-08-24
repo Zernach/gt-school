@@ -21,22 +21,20 @@ The Container has no external internet egress. PostgreSQL and Redis bind `127.0.
 
 ## One-time Pages bootstrap
 
-After authenticating Wrangler with an account that owns the intended project, create the Direct Upload Pages project once from a clean `main` checkout:
+The scripts always authenticate through the shared zprofile non-VPN Wrangler runner (`$HOME/code/zprofile/zprofile-run-function.zsh`). That runner routes Cloudflare API, OAuth challenge, and registry traffic outside the VPN, so persisted Wrangler OAuth can be used without a `CLOUDFLARE_API_TOKEN`. Create the Direct Upload Pages project once from a clean `main` checkout:
 
 ```sh
-ZPROFILE_FUNCTION_RUNNER=/absolute/path/to/zprofile-run-function.zsh \
-  bash scripts/bootstrap_cloudflare_pages.sh
+bash scripts/bootstrap_cloudflare_pages.sh
 ```
 
-The optional runner is only for installations that need the established non-VPN Wrangler function. Without it, the script invokes local `npx --no-install wrangler`. Do not use the dashboard's drag-and-drop upload: it cannot compile the `functions/` directory. Direct Upload cannot later be converted to Git integration; that is intentional for this demo.
+Set `ZPROFILE_FUNCTION_RUNNER` only to override the shared-runner location. Do not use the dashboard's drag-and-drop upload: it cannot compile the `functions/` directory. Direct Upload cannot later be converted to Git integration; that is intentional for this demo.
 
 ## Canonical release
 
 Run only from an exact, clean, pushed `main` commit:
 
 ```sh
-ZPROFILE_FUNCTION_RUNNER=/absolute/path/to/zprofile-run-function.zsh \
-  bash scripts/deploy_cloudflare_demo.sh
+bash scripts/deploy_cloudflare_demo.sh
 ```
 
 The script refuses a detached branch, dirty checkout, non-`main` branch, non-full SHA, or a SHA that differs from `origin/main`. It seeds the fixtures and runs lint, typecheck, coverage, test/code ratio, golden, build, Compose configuration, Cloudflare source/type/build checks, image reset test, deployment-script test, Compose security/recovery/integration/suite/spend/benchmark/e2e checks. It then authenticates, reads the managed Container registry as an entitlement preflight, deploys the tagged Worker, requires three consecutive public `/ready` successes, runs a direct Worker sync/reconcile suite, and only then uploads Pages with the same full commit SHA.

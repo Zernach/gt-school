@@ -6,7 +6,7 @@ BACKEND_DIR="$ROOT_DIR/backend/cloudflare"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 PAGES_PROJECT_NAME=gt-school
 WORKER_NAME=gt-school-demo-api
-ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-}"
+ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"
 BACKEND_WORKER_URL="${GT_SCHOOL_BACKEND_WORKER_URL:-}"
 READY_ATTEMPTS="${GT_SCHOOL_READY_ATTEMPTS:-90}"
 READY_INTERVAL_SECONDS="${GT_SCHOOL_READY_INTERVAL_SECONDS:-5}"
@@ -21,12 +21,8 @@ pages_deploy_output=""
 ready_headers=""
 
 run_wrangler() {
-  if [[ -n "$ZPROFILE_FUNCTION_RUNNER" ]]; then
-    [[ -x "$ZPROFILE_FUNCTION_RUNNER" ]] || { echo "ZPROFILE_FUNCTION_RUNNER is not executable: $ZPROFILE_FUNCTION_RUNNER" >&2; exit 1; }
-    "$ZPROFILE_FUNCTION_RUNNER" run_wrangler_without_vpn npx --no-install wrangler "$@"
-  else
-    npx --no-install wrangler "$@"
-  fi
+  [[ -x "$ZPROFILE_FUNCTION_RUNNER" ]] || { echo "ZPROFILE_FUNCTION_RUNNER is not executable: $ZPROFILE_FUNCTION_RUNNER" >&2; exit 1; }
+  "$ZPROFILE_FUNCTION_RUNNER" run_wrangler_without_vpn npx --no-install wrangler "$@"
 }
 
 print_manual_rollback() {
