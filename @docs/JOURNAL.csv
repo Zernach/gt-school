@@ -57,3 +57,4 @@ Read @docs/BOOTSTRAP.md and @docs/RESEARCH.md
 Take full ownership of exceeding all expectation in the @docs/REQUIREMENTS.md
 
 There should be more tests than there is code, to ensure all edge cases are handled and our codebase is durable, maintainable.",2026-08-22T12:03:30-04:00,unavailable,8806
+Cloudflare zprofile release routing and deployment,"we must use the zprofile's usewithoutvpn script to bypass 403 errors, and we also do not need a cloudflare api token. Figure out a different way. Refer to to ~/code/nexben",2026-08-24T19:40:04-04:00,unavailable,unavailable
