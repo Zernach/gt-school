@@ -10,19 +10,94 @@ ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofi
 BACKEND_WORKER_URL="${GT_SCHOOL_BACKEND_WORKER_URL:-}"
 READY_ATTEMPTS="${GT_SCHOOL_READY_ATTEMPTS:-90}"
 READY_INTERVAL_SECONDS="${GT_SCHOOL_READY_INTERVAL_SECONDS:-5}"
+CONTAINER_ROLLOUT_ATTEMPTS="${GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS:-120}"
+CONTAINER_ROLLOUT_INTERVAL_SECONDS="${GT_SCHOOL_CONTAINER_ROLLOUT_INTERVAL_SECONDS:-5}"
+CONTAINER_ROLLOUT_STABLE_POLLS="${GT_SCHOOL_CONTAINER_ROLLOUT_STABLE_POLLS:-24}"
+CONTAINER_APPLICATION_NAME="${WORKER_NAME}-keystonedemocontainer"
 RELEASE_STARTED_AT="$(date +%s)"
 SOURCE_SHA=unresolved
 DEPLOYED_WORKER_VERSION_ID=not-deployed
 DEPLOYED_PAGES_DEPLOYMENT=not-deployed
+DEPLOYED_CONTAINER_VERSION=unresolved
 rollback_reported=false
 registry_preflight=""
 worker_deploy_output=""
 pages_deploy_output=""
 ready_headers=""
+container_list_output=""
+container_instances_output=""
 
 run_wrangler() {
   [[ -x "$ZPROFILE_FUNCTION_RUNNER" ]] || { echo "ZPROFILE_FUNCTION_RUNNER is not executable: $ZPROFILE_FUNCTION_RUNNER" >&2; exit 1; }
   "$ZPROFILE_FUNCTION_RUNNER" run_wrangler_without_vpn npx --no-install wrangler "$@"
+}
+
+# Wrangler's shared zprofile runner emits useful routing diagnostics alongside
+# CLI output. Extract the trailing JSON value rather than assuming stdout is
+# machine-only.
+container_application_from_output() {
+  node --input-type=module - "$container_list_output" "$CONTAINER_APPLICATION_NAME" <<'NODE'
+import { readFileSync } from 'node:fs';
+
+const [outputPath, applicationName] = process.argv.slice(2);
+const raw = readFileSync(outputPath, 'utf8');
+let containers;
+for (const index of [...raw.matchAll(/[\[{]/gu)].map((match) => match.index ?? 0)) {
+  try {
+    const candidate = JSON.parse(raw.slice(index));
+    if (Array.isArray(candidate)) {
+      containers = candidate;
+      break;
+    }
+  } catch {
+    // The runner's diagnostics precede the JSON response. Try the next JSON
+    // delimiter, then report an invalid command response below.
+  }
+}
+if (!containers) throw new Error('container_list_response_invalid');
+const container = containers.find((candidate) => candidate?.name === applicationName);
+if (!container) process.exit(0);
+if (typeof container.id !== 'string' || !/^[0-9a-f-]+$/u.test(container.id)) throw new Error('container_id_invalid');
+if (!Number.isSafeInteger(container.version) || container.version < 1) throw new Error('container_version_invalid');
+process.stdout.write(`${container.id}:${container.version}\n`);
+NODE
+}
+
+capture_container_application() {
+  if ! run_wrangler containers list --json >"$container_list_output" 2>&1; then
+    cat "$container_list_output" >&2
+    return 1
+  fi
+  container_application_from_output
+}
+
+container_has_running_revision() {
+  local container_id="$1"
+  local expected_version="$2"
+  if ! run_wrangler containers instances "$container_id" --json >"$container_instances_output" 2>&1; then
+    cat "$container_instances_output" >&2
+    return 1
+  fi
+  node --input-type=module - "$container_instances_output" "$expected_version" <<'NODE'
+import { readFileSync } from 'node:fs';
+
+const [outputPath, expectedVersion] = process.argv.slice(2);
+const raw = readFileSync(outputPath, 'utf8');
+let instances;
+for (const index of [...raw.matchAll(/[\[{]/gu)].map((match) => match.index ?? 0)) {
+  try {
+    const candidate = JSON.parse(raw.slice(index));
+    if (Array.isArray(candidate)) {
+      instances = candidate;
+      break;
+    }
+  } catch {
+    // See container_application_from_output: zprofile emits diagnostics first.
+  }
+}
+if (!instances) throw new Error('container_instances_response_invalid');
+process.exit(instances.some((instance) => instance?.state === 'running' && instance.version === Number(expectedVersion)) ? 0 : 1);
+NODE
 }
 
 print_manual_rollback() {
@@ -44,7 +119,7 @@ fail() {
 
 finish() {
   local status=$?
-  rm -f "${registry_preflight:-}" "${worker_deploy_output:-}" "${pages_deploy_output:-}" "${ready_headers:-}"
+  rm -f "${registry_preflight:-}" "${worker_deploy_output:-}" "${pages_deploy_output:-}" "${ready_headers:-}" "${container_list_output:-}" "${container_instances_output:-}"
   if (( status != 0 )) && [[ "$rollback_reported" != true ]]; then
     print_manual_rollback "release command failed with exit status $status"
   fi
@@ -52,11 +127,14 @@ finish() {
 }
 trap finish EXIT
 
-for setting in READY_ATTEMPTS READY_INTERVAL_SECONDS; do
+for setting in READY_ATTEMPTS READY_INTERVAL_SECONDS CONTAINER_ROLLOUT_ATTEMPTS CONTAINER_ROLLOUT_INTERVAL_SECONDS CONTAINER_ROLLOUT_STABLE_POLLS; do
   [[ "${!setting}" =~ ^[1-9][0-9]*$ ]] || fail "$setting must be a positive integer"
 done
 (( READY_ATTEMPTS <= 120 )) || fail "GT_SCHOOL_READY_ATTEMPTS must not exceed 120"
 (( READY_INTERVAL_SECONDS <= 30 )) || fail "GT_SCHOOL_READY_INTERVAL_SECONDS must not exceed 30"
+(( CONTAINER_ROLLOUT_ATTEMPTS <= 180 )) || fail "GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS must not exceed 180"
+(( CONTAINER_ROLLOUT_INTERVAL_SECONDS <= 30 )) || fail "GT_SCHOOL_CONTAINER_ROLLOUT_INTERVAL_SECONDS must not exceed 30"
+(( CONTAINER_ROLLOUT_STABLE_POLLS <= CONTAINER_ROLLOUT_ATTEMPTS )) || fail "GT_SCHOOL_CONTAINER_ROLLOUT_STABLE_POLLS must not exceed GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS"
 
 [[ "$(git -C "$ROOT_DIR" branch --show-current)" == main ]] || fail "release must run from the main branch"
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain)" ]] || fail "release refuses a dirty worktree"
@@ -96,9 +174,18 @@ registry_preflight="$(mktemp "${TMPDIR:-/tmp}/gt-school-container-registry.XXXXX
 worker_deploy_output="$(mktemp "${TMPDIR:-/tmp}/gt-school-worker-deploy.XXXXXX")"
 pages_deploy_output="$(mktemp "${TMPDIR:-/tmp}/gt-school-pages-deploy.XXXXXX")"
 ready_headers="$(mktemp "${TMPDIR:-/tmp}/gt-school-ready-headers.XXXXXX")"
+container_list_output="$(mktemp "${TMPDIR:-/tmp}/gt-school-container-list.XXXXXX")"
+container_instances_output="$(mktemp "${TMPDIR:-/tmp}/gt-school-container-instances.XXXXXX")"
 if ! run_wrangler containers images list --json >"$registry_preflight" 2>&1; then
   cat "$registry_preflight" >&2
   fail "managed Container registry entitlement is unavailable; confirm Workers Paid and Containers access before retrying"
+fi
+
+PREVIOUS_CONTAINER_APPLICATION="$(capture_container_application)" || fail "could not read the current managed Container revision"
+if [[ -n "$PREVIOUS_CONTAINER_APPLICATION" ]]; then
+  echo "Current managed Container revision: $PREVIOUS_CONTAINER_APPLICATION"
+else
+  echo "No prior managed Container revision is registered; waiting for initial rollout"
 fi
 
 if ! (cd "$BACKEND_DIR" && run_wrangler deploy --tag="$SOURCE_SHA" --message="gt-school demo $SOURCE_SHA") | tee "$worker_deploy_output"; then
@@ -110,6 +197,40 @@ if [[ -z "$BACKEND_WORKER_URL" ]]; then
   BACKEND_WORKER_URL="$(grep -Eo "https://${WORKER_NAME}\.[A-Za-z0-9.-]+\.workers\.dev" "$worker_deploy_output" | tail -1 || true)"
 fi
 [[ -n "$BACKEND_WORKER_URL" ]] || fail "Worker deployed but its workers.dev URL was not discoverable; set GT_SCHOOL_BACKEND_WORKER_URL to run bounded live validation"
+
+# A Worker version can become routable before its managed Container image has
+# rolled out. Do not mistake a ready response from the old ephemeral instance
+# for readiness of the release just uploaded. Require a running instance for a
+# stable Container revision before probing the public readiness endpoint.
+container_revision_stable_polls=0
+last_container_application=""
+for ((attempt = 1; attempt <= CONTAINER_ROLLOUT_ATTEMPTS; attempt += 1)); do
+  CURRENT_CONTAINER_APPLICATION="$(capture_container_application)" || fail "could not read the managed Container rollout state"
+  if [[ -n "$CURRENT_CONTAINER_APPLICATION" ]]; then
+    IFS=: read -r container_id container_version <<<"$CURRENT_CONTAINER_APPLICATION"
+    if container_has_running_revision "$container_id" "$container_version"; then
+      if [[ "$CURRENT_CONTAINER_APPLICATION" == "$last_container_application" ]]; then
+        container_revision_stable_polls=$((container_revision_stable_polls + 1))
+      else
+        container_revision_stable_polls=1
+        last_container_application="$CURRENT_CONTAINER_APPLICATION"
+      fi
+      if (( container_revision_stable_polls >= CONTAINER_ROLLOUT_STABLE_POLLS )); then
+        DEPLOYED_CONTAINER_VERSION="$container_version"
+        break
+      fi
+    else
+      container_revision_stable_polls=0
+      last_container_application="$CURRENT_CONTAINER_APPLICATION"
+    fi
+  else
+    container_revision_stable_polls=0
+    last_container_application=""
+  fi
+  (( attempt < CONTAINER_ROLLOUT_ATTEMPTS )) && sleep "$CONTAINER_ROLLOUT_INTERVAL_SECONDS"
+done
+[[ "$DEPLOYED_CONTAINER_VERSION" != unresolved ]] || fail "managed Container rollout did not reach a stable running revision after Worker deploy"
+echo "Managed Container revision $DEPLOYED_CONTAINER_VERSION is stable; beginning public readiness probes"
 
 ready_url="${BACKEND_WORKER_URL%/}/ready"
 consecutive_ready=0

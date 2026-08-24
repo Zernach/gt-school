@@ -50,6 +50,20 @@ cat >"$tmp_dir/zprofile-runner" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'wrangler %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+if [[ "$*" == *' containers list --json'* ]]; then
+  count=0
+  [[ -f "$GT_SCHOOL_TEST_CONTAINER_COUNTER" ]] && count="$(<"$GT_SCHOOL_TEST_CONTAINER_COUNTER")"
+  count=$((count + 1))
+  printf '%s' "$count" >"$GT_SCHOOL_TEST_CONTAINER_COUNTER"
+  version=2
+  (( count == 1 )) && version=1
+  printf '[{"id":"00000000-0000-4000-8000-000000000001","name":"gt-school-demo-api-keystonedemocontainer","version":%s}]\n' "$version"
+  exit 0
+fi
+if [[ "$*" == *' containers instances 00000000-0000-4000-8000-000000000001 --json'* ]]; then
+  printf '[{"id":"instance-demo-id","state":"running","version":2}]\n'
+  exit 0
+fi
 if [[ "$*" == *' wrangler deploy '* ]]; then
   printf 'Published https://gt-school-demo-api.example.workers.dev\nWorker Version ID: worker-demo-version\n'
 fi
@@ -60,11 +74,15 @@ log_file="$tmp_dir/commands.log"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/bootstrap_cloudflare_pages.sh"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 run_release() {
-  GT_SCHOOL_TEST_LOG="$log_file" \
+    GT_SCHOOL_TEST_LOG="$log_file" \
     GT_SCHOOL_TEST_SHA="$source_sha" \
     GT_SCHOOL_TEST_READY_COUNTER="$tmp_dir/ready-counter" \
+    GT_SCHOOL_TEST_CONTAINER_COUNTER="$tmp_dir/container-counter" \
     GT_SCHOOL_READY_ATTEMPTS=3 \
     GT_SCHOOL_READY_INTERVAL_SECONDS=1 \
+    GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS=3 \
+    GT_SCHOOL_CONTAINER_ROLLOUT_INTERVAL_SECONDS=1 \
+    GT_SCHOOL_CONTAINER_ROLLOUT_STABLE_POLLS=2 \
     ZPROFILE_FUNCTION_RUNNER="$tmp_dir/zprofile-runner" \
     PATH="$tmp_dir/bin:$PATH" \
     bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
@@ -76,6 +94,8 @@ grep -q "npm run seed -- --seed 424242" "$log_file"
 grep -q "npm run test:cloudflare-image" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler whoami" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler containers images list --json" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler containers list --json" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler containers instances 00000000-0000-4000-8000-000000000001 --json" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler deploy --tag=$source_sha --message=gt-school demo $source_sha" "$log_file"
 grep -q "npm run verify:cloudflare-demo --workspace @keystone/api --" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler pages deploy dist --project-name=gt-school --branch=main --commit-hash=$source_sha --commit-dirty=false" "$log_file"
@@ -83,10 +103,11 @@ grep -q "npm run test:e2e" "$log_file"
 
 registry_line="$(grep -n 'containers images list' "$log_file" | cut -d: -f1 | tail -1)"
 worker_line="$(grep -n 'wrangler deploy --tag' "$log_file" | cut -d: -f1 | tail -1)"
+container_line="$(grep -n 'containers instances 00000000-0000-4000-8000-000000000001' "$log_file" | cut -d: -f1 | head -1)"
 suite_line="$(grep -n 'npm run verify:cloudflare-demo' "$log_file" | cut -d: -f1 | tail -1)"
 pages_line="$(grep -n 'pages deploy' "$log_file" | cut -d: -f1 | tail -1)"
 live_browser_line="$(grep -n 'npm run test:e2e' "$log_file" | cut -d: -f1 | tail -1)"
-[[ "$registry_line" -lt "$worker_line" && "$worker_line" -lt "$suite_line" && "$suite_line" -lt "$pages_line" && "$pages_line" -lt "$live_browser_line" ]] || { echo "release ordering was not fail-closed" >&2; exit 1; }
+[[ "$registry_line" -lt "$worker_line" && "$worker_line" -lt "$container_line" && "$container_line" -lt "$suite_line" && "$suite_line" -lt "$pages_line" && "$pages_line" -lt "$live_browser_line" ]] || { echo "release ordering was not fail-closed" >&2; exit 1; }
 [[ "$(grep -c 'curl .*workers.dev/ready' "$log_file")" == 3 ]] || { echo "release must require three consecutive readiness probes" >&2; exit 1; }
 
 if GT_SCHOOL_TEST_GIT_DIRTY=1 run_release >"$tmp_dir/dirty.log" 2>&1; then
