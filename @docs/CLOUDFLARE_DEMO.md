@@ -37,7 +37,7 @@ Run only from an exact, clean, pushed `main` commit:
 bash scripts/deploy_cloudflare_demo.sh
 ```
 
-The script refuses a detached branch, dirty checkout, non-`main` branch, non-full SHA, or a SHA that differs from `origin/main`. It seeds the fixtures and runs lint, typecheck, coverage, test/code ratio, golden, build, Compose configuration, Cloudflare source/type/build checks, image reset test, deployment-script test, Compose security/recovery/integration/suite/spend/benchmark/e2e checks. It then authenticates, reads the managed Container registry as an entitlement preflight, deploys the tagged Worker, requires three consecutive public `/ready` successes, runs a direct Worker sync/reconcile suite, and only then uploads Pages with the same full commit SHA.
+The script refuses a detached branch, dirty checkout, non-`main` branch, non-full SHA, or a SHA that differs from `origin/main`. It seeds the fixtures and runs lint, typecheck, coverage, test/code ratio, golden, build, Compose configuration, Cloudflare source/type/build checks, image reset test, deployment-script test, Compose security/recovery/integration/suite/spend/benchmark/e2e checks. It then authenticates, reads the managed Container registry as an entitlement preflight, deploys the tagged Worker, requires three consecutive public `/ready` successes, runs a direct Worker sync/reconcile correctness check, and only then uploads Pages with the same full commit SHA. The local Compose `suite` remains the performance gate; the remote check allows up to ten minutes because Container startup/runtime speed is not a portable local-performance claim.
 
 Set `GT_SCHOOL_BACKEND_WORKER_URL` only if Wrangler cannot print the account-specific `workers.dev` URL. The value must be the deployed Worker base URL, never a database, Container, or custom endpoint.
 
@@ -49,7 +49,7 @@ Set `GT_SCHOOL_BACKEND_WORKER_URL` only if Wrangler cannot print the account-spe
 | Pages source | frontend proxy/config tests and `npm run typecheck:pages --workspace @keystone/frontend` |
 | Ephemeral image | `npm run test:cloudflare-image` |
 | Deploy orchestration | `npm run test:deploy` |
-| Public backend | three `workers.dev/ready` successes, then direct `npm run suite --workspace @keystone/api` |
+| Public backend | three `workers.dev/ready` successes, then direct exact-total sync/reconcile verification with a bounded ten-minute poll window |
 | Public dashboard | `https://gt-school.pages.dev` load plus post-upload Playwright dashboard/proposal-hold review through the Pages proxy |
 
 Local and source proof must not be presented as Cloudflare runtime or authenticated-browser proof.

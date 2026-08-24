@@ -15,6 +15,7 @@
     "seed": "tsx src/cli/seed.ts",
     "reconcile": "tsx src/cli/reconcile.ts",
     "suite": "tsx src/cli/suite.ts",
+    "verify:cloudflare-demo": "tsx src/cli/verify-cloudflare-demo.ts",
     "benchmark": "tsx src/cli/benchmark.ts",
     "cap-burst": "tsx src/cli/cap-burst.ts",
     "security-check": "tsx src/cli/security-check.ts",

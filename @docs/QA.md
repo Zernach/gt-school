@@ -22,7 +22,7 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 | Cloudflare Worker boundary | `backend/cloudflare/src/` route policy and Container forwarding | Worker unit/type tests prove allowed routes/methods/body guard, unchanged stream bodies, singleton identity, one pre-forward listener retry, and structured 503s |
 | Pages same-origin API bridge | `frontend/functions/api/[[path]].ts`, `frontend/wrangler.jsonc` | frontend tests prove service binding forward/missing-binding failure, generated binding types, and static-route exclusions |
 | Ephemeral all-in-one reset | `backend/cloudflare/Dockerfile`, `ephemeral-entrypoint.sh` | `npm run test:cloudflare-image` builds Linux/amd64, proves `/ready`, sync/reconcile 120k/3050 totals, restarts, and proves review loss plus baseline restoration |
-| Manual release ordering | `scripts/deploy_cloudflare_demo.sh` | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live suite before Pages upload, and Pages-before-live-browser ordering |
+| Manual release ordering | `scripts/deploy_cloudflare_demo.sh` | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live correctness verification before Pages upload, and Pages-before-live-browser ordering |
 
 ## Test layers
 
@@ -66,7 +66,7 @@ These numbers are local Docker/source evidence, not deployment or production evi
 
 ## Cloudflare evidence boundary
 
-The local Cloudflare image and Worker/Page tests prove source, type, image, and local Docker behavior only. They do not prove account entitlement, registry authorization, Cloudflare Container runtime convergence, the deployed workers.dev endpoint, Pages Function bindings, or a live browser session. The release script requires those layers in this order: canonical fixture seed and full repository gates; Wrangler authentication; Container registry preflight; tagged Worker deploy; three consecutive public `/ready` responses; direct Worker sync/reconcile; Pages upload; then Playwright against `https://gt-school.pages.dev` that loads the dashboard and records a proposal hold through the Pages proxy. A deployment may be reported only after those direct endpoint and browser checks have actually run.
+The local Cloudflare image and Worker/Page tests prove source, type, image, and local Docker behavior only. They do not prove account entitlement, registry authorization, Cloudflare Container runtime convergence, the deployed workers.dev endpoint, Pages Function bindings, or a live browser session. The release script requires those layers in this order: canonical fixture seed and full repository gates; Wrangler authentication; Container registry preflight; tagged Worker deploy; three consecutive public `/ready` responses; direct Worker exact-total sync/reconcile correctness verification; Pages upload; then Playwright against `https://gt-school.pages.dev` that loads the dashboard and records a proposal hold through the Pages proxy. Local Compose `suite` retains its portable performance thresholds; the remote correctness check has a bounded ten-minute polling window. A deployment may be reported only after those direct endpoint and browser checks have actually run.
 
 ## Failure and recovery checks
 

@@ -28,7 +28,7 @@ async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
   return parsed as Envelope<T>;
 }
 
-export async function triggerAndWait(config: AppConfig, baseUrl: string, jobType: 'sync' | 'reconcile', idempotencyKey: string, generation = 3): Promise<{ reference: JobReference; job: TerminalJob }> {
+export async function triggerAndWait(config: AppConfig, baseUrl: string, jobType: 'sync' | 'reconcile', idempotencyKey: string, generation = 3, pollTimeoutMs = 180_000): Promise<{ reference: JobReference; job: TerminalJob }> {
   const secret = jobType === 'sync' ? config.SYNC_TRIGGER_SECRET : config.RECONCILE_TRIGGER_SECRET;
   const trigger = await fetch(`${baseUrl}/api/v1/jobs/${jobType}`, {
     method: 'POST',
@@ -41,13 +41,19 @@ export async function triggerAndWait(config: AppConfig, baseUrl: string, jobType
     signal: AbortSignal.timeout(15_000)
   });
   const reference = (await parseEnvelope<JobReference>(trigger)).data;
-  const deadline = Date.now() + 180_000;
+  const deadline = Date.now() + pollTimeoutMs;
   while (Date.now() < deadline) {
-    const response = await fetch(`${baseUrl}/api/v1/runs/${reference.id}`, {
-      headers: { 'x-keystone-client-key': config.DEMO_REVIEWER_KEY },
-      signal: AbortSignal.timeout(15_000)
-    });
-    if (response.status === 429) {
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/api/v1/runs/${reference.id}`, {
+        headers: { 'x-keystone-client-key': config.DEMO_REVIEWER_KEY },
+        signal: AbortSignal.timeout(15_000)
+      });
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      continue;
+    }
+    if (response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504 || response.status === 522) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       continue;
     }

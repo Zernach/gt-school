@@ -128,7 +128,7 @@ for ((attempt = 1; attempt <= READY_ATTEMPTS; attempt += 1)); do
 done
 (( consecutive_ready == 3 )) || fail "Worker did not return three consecutive ready responses at $ready_url (last HTTP $last_status)"
 
-API_BASE_URL="$BACKEND_WORKER_URL" npm run suite --workspace @keystone/api --
+GT_SCHOOL_RELEASE_SHA="$SOURCE_SHA" API_BASE_URL="$BACKEND_WORKER_URL" npm run verify:cloudflare-demo --workspace @keystone/api --
 if ! (cd "$FRONTEND_DIR" && run_wrangler pages deploy dist --project-name="$PAGES_PROJECT_NAME" --branch=main --commit-hash="$SOURCE_SHA" --commit-dirty=false) | tee "$pages_deploy_output"; then
   fail "Pages deployment failed"
 fi
