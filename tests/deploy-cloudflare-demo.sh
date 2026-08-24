@@ -108,6 +108,8 @@ suite_line="$(grep -n 'npm run verify:cloudflare-demo' "$log_file" | cut -d: -f1
 pages_line="$(grep -n 'pages deploy' "$log_file" | cut -d: -f1 | tail -1)"
 live_browser_line="$(grep -n 'npm run test:e2e' "$log_file" | cut -d: -f1 | tail -1)"
 [[ "$registry_line" -lt "$worker_line" && "$worker_line" -lt "$container_line" && "$container_line" -lt "$suite_line" && "$suite_line" -lt "$pages_line" && "$pages_line" -lt "$live_browser_line" ]] || { echo "release ordering was not fail-closed" >&2; exit 1; }
+health_line="$(grep -n 'curl .*workers.dev/health' "$log_file" | cut -d: -f1 | head -1)"
+[[ "$worker_line" -lt "$health_line" && "$health_line" -lt "$container_line" ]] || { echo "release must wake the request-started Container before checking its revision" >&2; exit 1; }
 [[ "$(grep -c 'curl .*workers.dev/ready' "$log_file")" == 3 ]] || { echo "release must require three consecutive readiness probes" >&2; exit 1; }
 
 if GT_SCHOOL_TEST_GIT_DIRTY=1 run_release >"$tmp_dir/dirty.log" 2>&1; then

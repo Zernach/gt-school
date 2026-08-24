@@ -201,10 +201,14 @@ fi
 # A Worker version can become routable before its managed Container image has
 # rolled out. Do not mistake a ready response from the old ephemeral instance
 # for readiness of the release just uploaded. Require a running instance for a
-# stable Container revision before probing the public readiness endpoint.
+# stable Container revision before probing the public readiness endpoint. A
+# Container is request-started, so /health is used only to wake it; success on
+# that route is never treated as release readiness.
+health_url="${BACKEND_WORKER_URL%/}/health"
 container_revision_stable_polls=0
 last_container_application=""
 for ((attempt = 1; attempt <= CONTAINER_ROLLOUT_ATTEMPTS; attempt += 1)); do
+  curl --silent --output /dev/null --max-time 30 "$health_url" || true
   CURRENT_CONTAINER_APPLICATION="$(capture_container_application)" || fail "could not read the managed Container rollout state"
   if [[ -n "$CURRENT_CONTAINER_APPLICATION" ]]; then
     IFS=: read -r container_id container_version <<<"$CURRENT_CONTAINER_APPLICATION"
