@@ -1,0 +1,32 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "gt-school-demo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "containers": [
+    {
+      "class_name": "KeystoneDemoContainer",
+      "image": "./Dockerfile",
+      "image_build_context": "../..",
+      "instance_type": "standard-1",
+      "max_instances": 1,
+      "ssh": { "enabled": false },
+      "authorized_keys": []
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "KEYSTONE_DEMO", "class_name": "KeystoneDemoContainer" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["KeystoneDemoContainer"] }
+  ]
+}

@@ -14,6 +14,16 @@ The React/Vite dashboard is a human review surface, not a source editor. It pres
 
 The production nginx image is unprivileged and serves a strict CSP, `nosniff`, `DENY` framing, and `no-referrer`. `/api` is proxied to the API over internal Compose DNS so the browser uses one origin. TLS must be terminated by deployment ingress; local Compose intentionally uses loopback HTTP.
 
+## Cloudflare Pages demo
+
+`wrangler.jsonc` defines the Direct Upload Pages project `gt-school` and the `KEYSTONE_DEMO_API` service binding to the backend Worker. `functions/api/[[path]].ts` forwards the original browser request to that binding, retaining the existing relative `/api/v1/*` client contract and deliberately adding no browser CORS policy. `public/_headers` preserves the static security headers; `public/_routes.json` invokes a Function only for `/api/*` and excludes static assets.
+
+Pages deployment is intentionally manual Direct Upload, never Git-integrated. The public hostname is `https://gt-school.pages.dev`; it is only a synthetic, ephemeral demo and should not receive a real client key or data export. Generate binding types after changing either Wrangler configuration:
+
+```sh
+npm run cloudflare:types
+```
+
 ## Commands
 
 ```sh

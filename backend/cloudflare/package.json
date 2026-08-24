@@ -1,0 +1,21 @@
+{
+  "name": "@keystone/cloudflare-ingress",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types worker-configuration.d.ts",
+    "dry-run": "wrangler deploy --dry-run"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.125.0"
+  }
+}

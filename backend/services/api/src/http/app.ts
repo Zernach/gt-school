@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import { access } from 'node:fs/promises';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import type { RedisClientType } from 'redis';
@@ -55,6 +56,16 @@ export interface AppDependencies {
   adapters: readonly ReadOnlySourceAdapter[];
 }
 
+async function readinessSentinelExists(path: string): Promise<boolean> {
+  if (!path) return true;
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function buildApp(dependencies: AppDependencies): Promise<FastifyInstance> {
   const { config, pool, queue, adapters } = dependencies;
   const app = Fastify({ logger: { level: config.NODE_ENV === 'test' ? 'silent' : 'info', redact: ['req.headers.x-keystone-client-key', 'req.headers.x-keystone-trigger-secret'] }, bodyLimit: config.REQUEST_BODY_LIMIT_BYTES, requestTimeout: 30_000, trustProxy: false, genReqId: (request) => request.headers['x-request-id']?.toString().slice(0, 128) || crypto.randomUUID() });
@@ -81,12 +92,28 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     if (!secretMatches(header(request, 'x-keystone-trigger-secret'), expected)) await reply.code(401).send({ error: { code: 'unauthorized_trigger', message: 'A valid per-job trigger secret is required.' }, requestId: request.id });
   };
 
-  app.get('/health', async (request, reply) => {
+  const health = async (): Promise<{ ready: boolean; data: Record<string, unknown> }> => {
     const database = await databaseReady(pool);
     const queueReady = await queue.ping().then((response) => response === 'PONG').catch(() => false);
     const sources = await Promise.all(adapters.map((adapter) => adapter.health()));
     const ready = database.ready && queueReady && sources.every(({ ready: sourceReady }) => sourceReady);
-    return data(reply, request, { status: ready ? 'ok' : 'degraded', process: { ready: true }, database, queue: { ready: queueReady }, sources }, ready ? 200 : 503);
+    return { ready, data: { status: ready ? 'ok' : 'degraded', process: { ready: true }, database, queue: { ready: queueReady }, sources } };
+  };
+
+  app.get('/health', async (request, reply) => {
+    const status = await health();
+    return data(reply, request, status.data, status.ready ? 200 : 503);
+  });
+
+  app.get('/ready', async (request, reply) => {
+    const status = await health();
+    const bootstrapReady = await readinessSentinelExists(config.READINESS_SENTINEL_PATH);
+    const ready = status.ready && bootstrapReady;
+    return data(reply, request, {
+      ...status.data,
+      status: ready ? 'ok' : 'degraded',
+      bootstrap: { ready: bootstrapReady }
+    }, ready ? 200 : 503);
   });
 
   app.get('/api/v1/overview', { preHandler: requireClient }, async (request, reply) => data(reply, request, await getOverview(pool, request.tenant!.tenantId)));

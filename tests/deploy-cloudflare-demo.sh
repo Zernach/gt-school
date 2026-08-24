@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source_sha="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/keystone-cloudflare-deploy-test.XXXXXX")"
+cleanup() { rm -rf "$tmp_dir"; }
+trap cleanup EXIT
+mkdir -p "$tmp_dir/bin"
+
+cat >"$tmp_dir/bin/git" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+args="$*"
+if [[ "$args" == *'status --porcelain'* ]]; then [[ "${GT_SCHOOL_TEST_GIT_DIRTY:-0}" == 1 ]] && printf ' M changed\n'; exit 0; fi
+if [[ "$args" == *'branch --show-current'* ]]; then printf '%s\n' "${GT_SCHOOL_TEST_BRANCH:-main}"; exit 0; fi
+if [[ "$args" == *'rev-parse HEAD'* ]]; then printf '%s\n' "$GT_SCHOOL_TEST_SHA"; exit 0; fi
+if [[ "$args" == *'rev-parse origin/main'* ]]; then printf '%s\n' "${GT_SCHOOL_TEST_ORIGIN_SHA:-$GT_SCHOOL_TEST_SHA}"; exit 0; fi
+if [[ "$args" == *'fetch origin main'* ]]; then printf 'git fetch\n' >>"$GT_SCHOOL_TEST_LOG"; exit 0; fi
+echo "unexpected git command: $args" >&2
+exit 1
+EOF
+
+cat >"$tmp_dir/bin/npm" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'npm %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+EOF
+
+cat >"$tmp_dir/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'curl %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+if [[ "$*" == *'--write-out'* ]]; then
+  count=0
+  [[ -f "$GT_SCHOOL_TEST_READY_COUNTER" ]] && count="$(<"$GT_SCHOOL_TEST_READY_COUNTER")"
+  count=$((count + 1))
+  printf '%s' "$count" >"$GT_SCHOOL_TEST_READY_COUNTER"
+  printf '%s' "${GT_SCHOOL_TEST_READY_STATUS:-200}"
+fi
+EOF
+
+cat >"$tmp_dir/bin/sleep" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'sleep %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+EOF
+
+cat >"$tmp_dir/zprofile-runner" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'wrangler %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+if [[ "$*" == *' wrangler deploy '* ]]; then
+  printf 'Published https://gt-school-demo-api.example.workers.dev\nWorker Version ID: worker-demo-version\n'
+fi
+EOF
+chmod +x "$tmp_dir/bin/git" "$tmp_dir/bin/npm" "$tmp_dir/bin/curl" "$tmp_dir/bin/sleep" "$tmp_dir/zprofile-runner"
+
+log_file="$tmp_dir/commands.log"
+run_release() {
+  GT_SCHOOL_TEST_LOG="$log_file" \
+    GT_SCHOOL_TEST_SHA="$source_sha" \
+    GT_SCHOOL_TEST_READY_COUNTER="$tmp_dir/ready-counter" \
+    GT_SCHOOL_READY_ATTEMPTS=3 \
+    GT_SCHOOL_READY_INTERVAL_SECONDS=1 \
+    ZPROFILE_FUNCTION_RUNNER="$tmp_dir/zprofile-runner" \
+    PATH="$tmp_dir/bin:$PATH" \
+    bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
+}
+
+run_release >/dev/null
+grep -q "git fetch" "$log_file"
+grep -q "npm run seed -- --seed 424242" "$log_file"
+grep -q "npm run test:cloudflare-image" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler whoami" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler containers images list --json" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler deploy --tag=$source_sha --message=gt-school demo $source_sha" "$log_file"
+grep -q "npm run suite --workspace @keystone/api --" "$log_file"
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler pages deploy dist --project-name=gt-school --branch=main --commit-hash=$source_sha --commit-dirty=false" "$log_file"
+grep -q "npm run test:e2e" "$log_file"
+
+registry_line="$(grep -n 'containers images list' "$log_file" | cut -d: -f1 | tail -1)"
+worker_line="$(grep -n 'wrangler deploy --tag' "$log_file" | cut -d: -f1 | tail -1)"
+suite_line="$(grep -n 'npm run suite' "$log_file" | cut -d: -f1 | tail -1)"
+pages_line="$(grep -n 'pages deploy' "$log_file" | cut -d: -f1 | tail -1)"
+live_browser_line="$(grep -n 'npm run test:e2e' "$log_file" | cut -d: -f1 | tail -1)"
+[[ "$registry_line" -lt "$worker_line" && "$worker_line" -lt "$suite_line" && "$suite_line" -lt "$pages_line" && "$pages_line" -lt "$live_browser_line" ]] || { echo "release ordering was not fail-closed" >&2; exit 1; }
+[[ "$(grep -c 'curl .*workers.dev/ready' "$log_file")" == 3 ]] || { echo "release must require three consecutive readiness probes" >&2; exit 1; }
+
+if GT_SCHOOL_TEST_GIT_DIRTY=1 run_release >"$tmp_dir/dirty.log" 2>&1; then
+  echo "dirty release must fail" >&2
+  exit 1
+fi
+grep -q 'release refuses a dirty worktree' "$tmp_dir/dirty.log"
+if grep -q 'containers images list' "$tmp_dir/dirty.log"; then
+  echo "dirty release reached Cloudflare preflight" >&2
+  exit 1
+fi
+
+if GT_SCHOOL_TEST_ORIGIN_SHA=0000000000000000000000000000000000000000 run_release >"$tmp_dir/stale.log" 2>&1; then
+  echo "stale release must fail" >&2
+  exit 1
+fi
+grep -q 'HEAD must exactly match origin/main' "$tmp_dir/stale.log"
+echo "Cloudflare deployment automation tests passed"

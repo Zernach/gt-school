@@ -62,6 +62,28 @@ flowchart LR
   DECISION -.-> AUDIT
 ```
 
+## Optional Cloudflare demo topology
+
+```mermaid
+flowchart LR
+  B[Browser] --> P[gt-school.pages.dev\nPages static dashboard]
+  P -->|same-origin /api/*| F[Pages Function\nKEYSTONE_DEMO_API binding]
+  F --> W[gt-school-demo-api Worker\nroute/method/body policy]
+  W -->|one named instance| C[Ephemeral Container\nAPI :8080]
+  C --> A[Fastify API]
+  C --> WK[Worker :3001]
+  C --> PG[(PostgreSQL + pgvector\nloopback only)]
+  C --> R[Redis\nloopback only]
+  A --> PG
+  A --> R
+  WK --> PG
+  WK --> R
+```
+
+The normal Compose graph above remains Keystone's durable-runtime reference. The Cloudflare path is deliberately an all-in-one exception for synthetic demonstration only: Container instance identity uses the platform's required Durable Object binding, but Keystone stores no application data there. It creates no D1, R2, Cloudflare Queue, or Durable Object application persistence. The Container's sole named instance is non-scaling and loses all app state at restart, eviction, scale-to-zero, or rollout.
+
+`/health` reports process/dependency status. `/ready` additionally requires the bootstrap sentinel, created only after immutable migrations, synthetic fixture initialization, API/worker health, deterministic sync, and deterministic reconciliation have completed. That distinction ensures a listening container cannot be presented as a ready dashboard baseline.
+
 ## Reconcile cycle
 
 The implementation exposes sync and reconcile as separate idempotent jobs. `npm run suite` is the scheduler/orchestrator that invokes them in this order; the diagram deliberately reflects that boundary.

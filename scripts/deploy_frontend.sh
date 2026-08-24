@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Frontend deployment is intentionally unconfigured; use the documented local Compose build or add an explicit TLS-enabled target." >&2
-exit 1
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy_cloudflare_demo.sh" "$@"

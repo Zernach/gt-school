@@ -34,6 +34,20 @@ Postgres and Redis are internal-only in tracked topology. App containers run non
 
 The worker exposes an internal health listener on port 3001. API `/health` reports DB, queue, and all adapters separately. Logs are structured JSON and redact trigger/client headers.
 
+## Ephemeral Cloudflare demo image
+
+`../backend/cloudflare/Dockerfile` is intentionally separate from the six-container Compose topology. It is a Linux/amd64 all-in-one image for the synthetic Cloudflare demo only: it starts Postgres/pgvector, Redis, the current API, and the current worker in one namespace. The exception to normal service-DNS guidance is explicit and contained: Postgres and Redis bind to `127.0.0.1` so neither is reachable through Container ingress; only the API listens on 8080.
+
+The entrypoint removes its own fixed `/tmp/keystone-*` data roots on every process start, initializes a new Postgres cluster, applies the existing forward migrations through `init`, starts dependencies, runs the deterministic sync/reconcile bootstrap, and only then creates the sentinel required by public `/ready`. The bootstrap asserts the fixed 120,000-record and 3,050-conflict baseline without applying the portable-runtime performance threshold from `suite`; the release workflow separately runs that full gate. A startup failure prints bounded Postgres/bootstrap logs and exits; it never marks a partial bootstrap ready. This image has no volumes and must never be described as durable.
+
+Run the isolated image regression with:
+
+```sh
+npm run test:cloudflare-image
+```
+
+It proves the Linux/amd64 build, readiness, live sync/reconcile totals, reviewer-state loss on restart, and deterministic baseline restoration. It creates and removes only its own test container.
+
 ## Data ownership
 
 Initialization SQL under `services/database/init/` runs only for a new volume. Never edit it to simulate an application migration. Immutable migrations live under `services/database/migrations/` and are checksum-verified by `init`; add the next numbered file for changes.

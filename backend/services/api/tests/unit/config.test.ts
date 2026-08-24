@@ -10,6 +10,7 @@ describe('configuration defaults', () => {
       HOST: '127.0.0.1',
       API_CONTAINER_PORT: 3000,
       WORKER_HEALTH_PORT: 3001,
+      READINESS_SENTINEL_PATH: '',
       RUNTIME_DATABASE_USER: 'keystone_runtime',
       RUNTIME_DATABASE_PASSWORD: 'fixture-runtime-password-only',
       QUEUE_URL: 'redis://127.0.0.1:6379/0',
@@ -60,6 +61,7 @@ describe('configuration coercion and overrides', () => {
   it.each([
     ['API_CONTAINER_PORT', '3100', 3100],
     ['WORKER_HEALTH_PORT', '3101', 3101],
+    ['READINESS_SENTINEL_PATH', '/tmp/keystone.ready', '/tmp/keystone.ready'],
     ['QUEUE_CLAIM_IDLE_MS', '1250', 1250],
     ['QUEUE_BLOCK_MS', '25', 25],
     ['REQUEST_BODY_LIMIT_BYTES', '4096', 4096],

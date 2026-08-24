@@ -17,6 +17,7 @@ const environmentSchema = z.object({
   HOST: z.string().default('127.0.0.1'),
   API_CONTAINER_PORT: positiveInteger(3000),
   WORKER_HEALTH_PORT: positiveInteger(3001),
+  READINESS_SENTINEL_PATH: z.string().default(''),
   DATABASE_URL: z.string().min(1).default('postgresql://keystone_runtime:fixture-runtime-password-only@127.0.0.1:5432/keystone'),
   DATABASE_ADMIN_URL: z.string().min(1).optional(),
   RUNTIME_DATABASE_USER: z.string().regex(/^[a-z_][a-z0-9_]{0,62}$/u).default('keystone_runtime'),

@@ -28,7 +28,7 @@ The first `suite` run submits a durable sync job, waits for all 120,000 records 
 | Sync trigger | `x-keystone-trigger-secret: fixture-sync-trigger-secret-only` |
 | Reconcile trigger | `x-keystone-trigger-secret: fixture-reconcile-trigger-secret-only` |
 
-These values are deliberately public fixture credentials. Replace every `fixture-*` value and terminate TLS before exposing the service outside an isolated development environment.
+These values are deliberately public fixture credentials. The Cloudflare demo uses them only for synthetic data, so they are not production authentication. Replace every `fixture-*` value and terminate TLS before exposing a real tenant or any non-synthetic data.
 
 ## Acceptance commands
 
@@ -112,6 +112,7 @@ Successful responses use `{ "data": ..., "requestId": "..." }`; failures use `{ 
 | Method/path | Scope | Purpose |
 |---|---|---|
 | `GET /health` | Public | Process, Postgres, Redis, and per-source readiness. |
+| `GET /ready` | Public | `/health` plus successful deterministic demo bootstrap when the ephemeral Cloudflare image is in use. |
 | `GET /api/v1/overview` | Viewer | Dashboard counts, active snapshots, latest invariant state, and spend. |
 | `GET /api/v1/conflicts` | Viewer | Cursor-paginated conflicts filtered by source/type/status/proposal/confidence/time. |
 | `GET /api/v1/conflicts/:id` | Viewer | Conflict, proposal, active-snapshot lineage, and correlated audit history. |
@@ -134,8 +135,18 @@ The request body limit defaults to 1 MiB, each fixture record to 256 KiB, list p
 - Immutable forward migrations: `backend/services/database/migrations/`
 - New-volume-only initialization: `backend/services/database/init/`
 - Invariants, sensitive fields, payment amounts, and prices: `config/*.json`
+- Cloudflare demo Worker/Container: `backend/cloudflare/`
+- Cloudflare Pages Direct Upload configuration and same-origin function bridge: `frontend/wrangler.jsonc`, `frontend/functions/api/[[path]].ts`
 
 All sibling containers use service DNS (`postgres`, `queue`, `api`) and internal ports. PostgreSQL and Redis have no tracked host publication. The API runtime role can read the synthetic `source_app` schema but cannot insert, update, or delete it; it also cannot update/delete immutable mirror, lineage, or audit rows.
+
+## Cloudflare synthetic demo
+
+The optional Cloudflare deployment is a deliberately ephemeral, synthetic-data-only demonstration—not a durable production runtime. It serves the dashboard from `https://gt-school.pages.dev`; the Pages Function proxies same-origin `/api/*` traffic through a service binding to the `gt-school-demo-api` Worker. The Worker exposes only `/ready`, `/health`, and `/api/v1/*`, which are forwarded to one named Container instance.
+
+That Linux/amd64 Container runs the existing API, PostgreSQL/pgvector, Redis, and worker in one network namespace. PostgreSQL and Redis bind only to loopback in this exceptional all-in-one topology; the API alone listens on port 8080 for Container ingress. Its filesystem is reset when it stops, is evicted, scales to zero, restarts, or rolls out. Startup applies the immutable migrations, loads fixtures, starts the worker, runs deterministic sync/reconcile bootstrap, and writes the `/ready` sentinel only after the baseline is complete. Decisions, audits, jobs, and spend state therefore disappear intentionally after every restart and rebuild from the canonical 120,000-record / 3,050-conflict baseline.
+
+This single-instance demo does not scale and provides no durability, availability, backup, or production security guarantee. It requires a Cloudflare Workers Paid account with Containers entitlement. There is no D1, R2, Queue, Durable Object application storage, custom domain, or Git-integrated Pages deployment. See [@docs/CLOUDFLARE_DEMO.md](@docs/CLOUDFLARE_DEMO.md) for the manually authorized release and rollback workflow.
 
 ## Security, privacy, and retention
 
@@ -168,3 +179,4 @@ These are local source/runtime results, not deployed or production claims. Re-ru
 - [AI_USAGE.md](AI_USAGE.md) — coding-assistant and reconciler-provider disclosure.
 - [backend/services/database/SCHEMA.md](backend/services/database/SCHEMA.md) — durable schema, grants, indexes, and migration rules.
 - [@docs/QA.md](@docs/QA.md) — acceptance matrix, Gherkin scenarios, and verification procedure.
+- [@docs/CLOUDFLARE_DEMO.md](@docs/CLOUDFLARE_DEMO.md) — Cloudflare topology, reset contract, release gates, and manual rollback.

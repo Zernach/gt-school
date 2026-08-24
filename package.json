@@ -7,6 +7,7 @@
     "node": ">=24.0.0"
   },
   "workspaces": [
+    "backend/cloudflare",
     "backend/services/api",
     "frontend"
   ],
@@ -30,6 +31,11 @@
     "test:security": "./backend/docker/compose.sh run --rm -T init node dist/cli/security-check.js",
     "test:worker-recovery": "bash scripts/test-worker-recovery.sh",
     "test:e2e": "playwright test",
+    "cloudflare:types": "npm run types --workspace @keystone/cloudflare-ingress && npm run types:pages --workspace @keystone/frontend",
+    "test:cloudflare": "npm run test --workspace @keystone/cloudflare-ingress && npm run typecheck --workspace @keystone/cloudflare-ingress && npm run typecheck:pages --workspace @keystone/frontend",
+    "test:cloudflare-image": "bash scripts/test-cloudflare-image.sh",
+    "test:deploy": "bash tests/deploy-cloudflare-demo.sh",
+    "deploy:cloudflare-demo": "bash scripts/deploy_cloudflare_demo.sh",
     "benchmark": "npm run benchmark --workspace @keystone/api --",
     "compose:config": "./backend/docker/compose.sh config --quiet",
     "compose:up": "./backend/docker/compose.sh up --build --wait"

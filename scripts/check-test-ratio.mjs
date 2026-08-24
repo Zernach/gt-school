@@ -3,10 +3,13 @@ import { extname, join, relative } from 'node:path';
 
 const repositoryRoot = process.cwd();
 const sourceRoots = [
+  join(repositoryRoot, 'backend/cloudflare/src'),
   join(repositoryRoot, 'backend/services/api/src'),
-  join(repositoryRoot, 'frontend/src')
+  join(repositoryRoot, 'frontend/src'),
+  join(repositoryRoot, 'frontend/functions')
 ];
 const testRoots = [
+  join(repositoryRoot, 'backend/cloudflare/src'),
   join(repositoryRoot, 'backend/services/api/tests'),
   join(repositoryRoot, 'frontend/src'),
   join(repositoryRoot, 'e2e')
@@ -48,7 +51,8 @@ const productionFiles = (await Promise.all(sourceRoots.map(filesBelow)))
   .flat()
   .filter((path) => sourceExtensions.has(extname(path)))
   .filter((path) => !isTestFile(relative(repositoryRoot, path)))
-  .filter((path) => !path.endsWith('vite-env.d.ts'));
+  .filter((path) => !path.endsWith('vite-env.d.ts'))
+  .filter((path) => !path.endsWith('worker-configuration.d.ts'));
 
 const testFiles = [...new Set((await Promise.all(testRoots.map(filesBelow)))
   .flat()

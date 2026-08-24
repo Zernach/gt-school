@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "WebWorker"],
+    "noEmit": true
+  },
+  "include": ["../src/pages-api-proxy.ts", "api/**/*.ts", "worker-configuration.d.ts"]
+}

@@ -19,6 +19,10 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 | Durable/replay-safe jobs | jobs table + Redis consumer group | API idempotency integration, live abandoned/duplicate delivery restart harness, replay reconciliation with zero provider calls |
 | Tenant/reviewer isolation | key hashes and tenant-bound SQL | auth integration, viewer decision 403, query unit contracts, optimistic-version tests |
 | Health/logging/privacy | API/worker health, redaction, audit | health integration, redaction unit suite, container health and structured logs |
+| Cloudflare Worker boundary | `backend/cloudflare/src/` route policy and Container forwarding | Worker unit/type tests prove allowed routes/methods/body guard, unchanged stream bodies, singleton identity, one pre-forward listener retry, and structured 503s |
+| Pages same-origin API bridge | `frontend/functions/api/[[path]].ts`, `frontend/wrangler.jsonc` | frontend tests prove service binding forward/missing-binding failure, generated binding types, and static-route exclusions |
+| Ephemeral all-in-one reset | `backend/cloudflare/Dockerfile`, `ephemeral-entrypoint.sh` | `npm run test:cloudflare-image` builds Linux/amd64, proves `/ready`, sync/reconcile 120k/3050 totals, restarts, and proves review loss plus baseline restoration |
+| Manual release ordering | `scripts/deploy_cloudflare_demo.sh` | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live suite before Pages upload, and Pages-before-live-browser ordering |
 
 ## Test layers
 
@@ -38,6 +42,10 @@ npm run test:spend-cap
 npm run suite
 npm run benchmark
 npm run test:e2e
+npm run cloudflare:types
+npm run test:cloudflare
+npm run test:cloudflare-image
+npm run test:deploy
 ```
 
 `test:ratio` counts nonblank production and test lines using committed source roots; tests must be strictly greater. Generated fixtures, golden bulk data, build output, and dependencies are excluded. Coverage independently targets the core logic required by the brief.
@@ -55,6 +63,10 @@ npm run test:e2e
 - Performance: entity p95 42.90 ms and dashboard API bundle p95 512.85 ms over 20 runs; full sync/fresh reconcile/replay checkpoints 22.72 s / 6.45 s / 0.58 s.
 
 These numbers are local Docker/source evidence, not deployment or production evidence. Re-run on the grader machine.
+
+## Cloudflare evidence boundary
+
+The local Cloudflare image and Worker/Page tests prove source, type, image, and local Docker behavior only. They do not prove account entitlement, registry authorization, Cloudflare Container runtime convergence, the deployed workers.dev endpoint, Pages Function bindings, or a live browser session. The release script requires those layers in this order: canonical fixture seed and full repository gates; Wrangler authentication; Container registry preflight; tagged Worker deploy; three consecutive public `/ready` responses; direct Worker sync/reconcile; Pages upload; then Playwright against `https://gt-school.pages.dev` that loads the dashboard and records a proposal hold through the Pages proxy. A deployment may be reported only after those direct endpoint and browser checks have actually run.
 
 ## Failure and recovery checks
 
