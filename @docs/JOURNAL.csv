@@ -1,4 +1,51 @@
 Prompt Summary,Original Prompt,Timestamp,Tokens,Elapsed
+Implemented Cloudflare synthetic demo release,"A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# Cloudflare demo deployment with release-grade verification
+
+## Summary
+
+Deploy the dashboard to `https://gt-school.pages.dev` and the existing backend behind one Cloudflare Worker plus a single all-in-one Cloudflare Container. The container will run the current API, PostgreSQL, Redis, and background worker as an intentionally ephemeral demo: every restart rebuilds the deterministic 120,000-record / 3,050-conflict dataset before becoming ready.
+
+## Implementation changes
+
+- Add `backend/cloudflare/` with a Worker, Container class, `wrangler.jsonc`, generated Worker types, and a Linux/amd64 all-in-one image.
+  - Worker exposes only `/ready`, `/health`, and existing `/api/v1/*` routes; rejects unsafe methods and oversized bodies; forwards streams unchanged.
+  - Container uses one named instance, no external internet egress, loopback-only PostgreSQL/Redis, a 30-minute sleep window, and one retry only for a lost-listening-port startup race.
+  - Add public `GET /ready`, which passes only after API dependencies, the background worker, and deterministic bootstrap have completed.
+  - Preserve all existing API contracts during a running instance; do not introduce D1, R2, Queues, or Durable Object persistence.
+
+- Add an ephemeral container entrypoint that initializes PostgreSQL and Redis, runs immutable migrations and existing fixture initialization, starts the API and worker, then performs deterministic sync/reconcile bootstrap before writing its readiness sentinel.
+  - Startup failure stops the container and emits bounded, useful logs.
+  - Restarting resets decisions, audits, and jobs by design; the dashboard’s baseline demo state is rebuilt automatically.
+
+- Add Cloudflare Pages configuration under `frontend/`.
+  - Build the current Vite application to Pages and preserve the existing security headers and static-asset routing.
+  - Add a Pages Function at `/api/*` with a service binding to the backend Worker, retaining the current same-origin frontend API contract and avoiding browser CORS changes.
+  - The backend’s `workers.dev` URL remains a smoke-test endpoint; `gt-school.pages.dev` is the interactive application.
+
+- Replace placeholder deployment scripts with a documented manual release workflow.
+  - Add a one-time Pages Direct Upload bootstrap script for project `gt-school` on branch `main`.
+  - Add one canonical demo deploy script which refuses dirty, detached, stale, or non-`main` commits; verifies the exact full SHA against `origin/main`; seeds fixtures; runs release checks; authenticates; preflights Container registry entitlement; deploys Worker first; validates live backend behavior; then uploads Pages.
+  - Tag deployments with the full source SHA. Require three consecutive `/ready` successes and a live sync/reconcile verification before uploading Pages.
+  - Do not auto-rollback. On failure, print deployed version identifiers and the exact manual rollback command.
+
+## Test and release gates
+
+- Keep the existing Compose suite as the durable-runtime regression baseline.
+- Add Worker tests for route/method/body limits, stream forwarding, singleton container identity, readiness behavior, retry bounds, and structured failures.
+- Add Pages Function tests for same-origin proxying, missing bindings, generated config types, and static-route exclusions.
+- Add an all-in-one image test: build Linux/amd64, wait for ready, exercise API sync/reconcile and golden totals, restart, and prove deterministic restoration plus intentional loss of prior review state.
+- Add deployment-script tests with stubbed tooling to prove gate ordering, SHA checks, registry preflight, three-success readiness, Pages-after-backend sequencing, and fail-closed behavior.
+- The release gate runs existing lint, typecheck, coverage, ratio, golden, build, Compose config, integration/security/recovery/spend/benchmark/e2e checks plus Cloudflare type/build checks and the ephemeral image suite.
+- Final live proof covers the direct Worker lifecycle and Playwright against `https://gt-school.pages.dev`, including dashboard loading through the Pages proxy and proposal review behavior.
+
+## Documentation and defaults
+
+- Update architecture, backend/frontend runbooks, and deployment QA documentation with the topology, reset semantics, security boundaries, release commands, validation matrix, and manual rollback procedure.
+- Document that this is a synthetic-data-only demo, uses a single non-scaling container instance, requires Cloudflare Workers Paid / Containers entitlement, and provides no production durability or availability guarantee.
+- Pages is intentionally Direct Upload/manual deployment; no Git-integrated deployment is configured.
+- Use `workers.dev` for backend smoke checks and no custom domain.",2026-08-24T18:06:47-0400,unavailable,22815
 Bootstrapped the project workspace,Bootstrapped the project workspace,2026-08-21T23:09:16-0400,0,1
 Keystone doctoral research and one-shot bootstrap plan,"1) Read the structure of the codebase + the @docs/REQUIREMENTS.md then conduct an intellectual, doctoral thesis level research report that dives into exceptional depth, and record your professional findings within @docs/RESEARCH.md
 
