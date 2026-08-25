@@ -74,7 +74,9 @@ log_file="$tmp_dir/commands.log"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/bootstrap_cloudflare_pages.sh"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 run_release() {
-    GT_SCHOOL_TEST_LOG="$log_file" \
+    : >"$tmp_dir/ready-counter"
+    : >"$tmp_dir/container-counter"
+    GT_SCHOOL_TEST_LOG="${GT_SCHOOL_TEST_LOG:-$log_file}" \
     GT_SCHOOL_TEST_SHA="$source_sha" \
     GT_SCHOOL_TEST_READY_COUNTER="$tmp_dir/ready-counter" \
     GT_SCHOOL_TEST_CONTAINER_COUNTER="$tmp_dir/container-counter" \
@@ -85,7 +87,7 @@ run_release() {
     GT_SCHOOL_CONTAINER_ROLLOUT_STABLE_POLLS=2 \
     ZPROFILE_FUNCTION_RUNNER="$tmp_dir/zprofile-runner" \
     PATH="$tmp_dir/bin:$PATH" \
-    bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
+    bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh" "$@"
 }
 
 run_release >/dev/null
@@ -127,4 +129,67 @@ if GT_SCHOOL_TEST_ORIGIN_SHA=0000000000000000000000000000000000000000 run_releas
   exit 1
 fi
 grep -q 'HEAD must exactly match origin/main' "$tmp_dir/stale.log"
+
+if bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh" nope >"$tmp_dir/bad-target.log" 2>&1; then
+  echo "invalid target must fail" >&2
+  exit 1
+fi
+grep -q 'deploy target must be frontend, backend, or both' "$tmp_dir/bad-target.log"
+
+frontend_log="$tmp_dir/frontend.log"
+GT_SCHOOL_TEST_LOG="$frontend_log" run_release frontend >/dev/null
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler pages deploy dist --project-name=gt-school --branch=main --commit-hash=$source_sha --commit-dirty=false" "$frontend_log"
+grep -q "npm run test:e2e" "$frontend_log"
+if grep -q 'containers images list' "$frontend_log"; then
+  echo "frontend release must not preflight the Container registry" >&2
+  exit 1
+fi
+if grep -q 'wrangler deploy --tag' "$frontend_log"; then
+  echo "frontend release must not deploy the Worker" >&2
+  exit 1
+fi
+if grep -q 'verify:cloudflare-demo' "$frontend_log"; then
+  echo "frontend release must not run Worker live verification" >&2
+  exit 1
+fi
+[[ "$(grep -c 'npm run test:e2e' "$frontend_log")" == 2 ]] || { echo "frontend release must keep local e2e then live Pages e2e" >&2; exit 1; }
+
+backend_log="$tmp_dir/backend.log"
+GT_SCHOOL_TEST_LOG="$backend_log" run_release backend >/dev/null
+grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler deploy --tag=$source_sha --message=gt-school demo $source_sha" "$backend_log"
+grep -q "npm run verify:cloudflare-demo --workspace @keystone/api --" "$backend_log"
+if grep -q 'pages deploy' "$backend_log"; then
+  echo "backend release must not upload Pages" >&2
+  exit 1
+fi
+[[ "$(grep -c 'npm run test:e2e' "$backend_log")" == 1 ]] || { echo "backend release must keep local e2e only" >&2; exit 1; }
+
+wrapper_log="$tmp_dir/frontend-wrapper.log"
+GT_SCHOOL_TEST_LOG="$wrapper_log" \
+GT_SCHOOL_TEST_SHA="$source_sha" \
+GT_SCHOOL_TEST_READY_COUNTER="$tmp_dir/ready-counter" \
+GT_SCHOOL_TEST_CONTAINER_COUNTER="$tmp_dir/container-counter" \
+GT_SCHOOL_READY_ATTEMPTS=3 \
+GT_SCHOOL_READY_INTERVAL_SECONDS=1 \
+GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS=3 \
+GT_SCHOOL_CONTAINER_ROLLOUT_INTERVAL_SECONDS=1 \
+GT_SCHOOL_CONTAINER_ROLLOUT_STABLE_POLLS=2 \
+ZPROFILE_FUNCTION_RUNNER="$tmp_dir/zprofile-runner" \
+PATH="$tmp_dir/bin:$PATH" \
+bash "$ROOT_DIR/scripts/deploy_frontend.sh" >/dev/null
+grep -q 'pages deploy' "$wrapper_log"
+if grep -q 'wrangler deploy --tag' "$wrapper_log"; then
+  echo "deploy_frontend.sh must not deploy the Worker" >&2
+  exit 1
+fi
+
+grep -q 'Deploy' "$ROOT_DIR/scripts/start.sh"
+grep -q 'deploy_frontend.sh' "$ROOT_DIR/scripts/start.sh"
+grep -q 'deploy_backend.sh' "$ROOT_DIR/scripts/start.sh"
+menu_output="$(printf '5\n4\n6\n' | bash "$ROOT_DIR/scripts/start.sh")"
+printf '%s\n' "$menu_output" | grep -q 'Deploy'
+printf '%s\n' "$menu_output" | grep -q 'Frontend'
+printf '%s\n' "$menu_output" | grep -q 'Backend'
+printf '%s\n' "$menu_output" | grep -q 'Both'
+printf '%s\n' "$menu_output" | grep -q 'Cancel'
 echo "Cloudflare deployment automation tests passed"

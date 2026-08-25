@@ -36,9 +36,12 @@ Requires Docker Compose v2, Node.js 24+, and npm 11+.
 ```sh
 npm ci
 npm run seed -- --seed 424242
+npm start                 # Start stack, Build, Verify, Show status, or Deploy
 npm run compose:up
 npm run suite
 ```
+
+`npm start` → **Deploy** chooses frontend (Pages), backend (Worker/Container), or both. Those releases still require a clean, pushed `main` commit; see [@docs/CLOUDFLARE_DEMO.md](@docs/CLOUDFLARE_DEMO.md).
 
 Open [http://localhost:4173](http://localhost:4173). The local API is [http://localhost:3000](http://localhost:3000). The Compose wrapper creates the ignored `backend/docker/.env` from the runnable, secret-free example when needed.
 

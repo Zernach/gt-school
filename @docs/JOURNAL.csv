@@ -70,3 +70,4 @@ Validated and closed Core requirements 1-6,"spin up subagents to check + validat
 Implement REQUIREMENTS stretch goals 7-10 end-to-end,"Plan & implement end-to-end all stretch goals
 
 @REQUIREMENTS.md (67-72) ",2026-08-24T21:03:20-04:00,unavailable,1460
+Add start.sh Deploy target menu,the @scripts/start.sh needs option for deploy: and user can choose frontend or backend or both,2026-08-24T22:21:37-04:00,unavailable,277

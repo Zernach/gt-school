@@ -26,7 +26,7 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 | Cloudflare Worker boundary | `backend/cloudflare/src/` route policy and Container forwarding | Worker unit/type tests prove allowed routes/methods/body guard, unchanged stream bodies, singleton identity, one pre-forward listener retry, and structured 503s |
 | Pages same-origin API bridge | `frontend/functions/api/[[path]].ts`, `frontend/wrangler.jsonc` | frontend tests prove service binding forward/missing-binding failure, generated binding types, and static-route exclusions |
 | Ephemeral all-in-one reset | `backend/cloudflare/Dockerfile`, `ephemeral-entrypoint.sh` | `npm run test:cloudflare-image` builds Linux/amd64, proves `/ready`, sync/reconcile 120k/3050 totals, restarts, and proves review loss plus baseline restoration |
-| Manual release ordering | `scripts/deploy_cloudflare_demo.sh` | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live correctness verification before Pages upload, and Pages-before-live-browser ordering |
+| Manual release ordering | `scripts/deploy_cloudflare_demo.sh`, `scripts/start.sh` Deploy menu | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live correctness verification before Pages upload, Pages-before-live-browser ordering, and frontend/backend/both target isolation |
 
 ## Test layers
 
