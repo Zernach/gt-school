@@ -23,10 +23,24 @@ assert.equal(reconcile.job.result.conflictCount, 3050);
 assert.equal(Number(reconcile.job.result.proposalsCreated) + Number(reconcile.job.result.proposalsDeduplicated), 3050);
 assert.equal(reconcile.job.result.sourceMirrorHashAfter, reconcile.job.result.sourceMirrorHashBefore);
 
+const stretch = await triggerAndWait(config, baseUrl, 'stretch', `${suffix}-stretch`, 3, bootstrapPollTimeoutMs);
+assert.equal(stretch.job.status, 'complete');
+const stretchResult = stretch.job.result as {
+  status: string;
+  grouping: { groupCount: number };
+  tickets: { extracted: number };
+  autoApply: { applied: number; sourceMirrorHashBefore: string; sourceMirrorHashAfter: string };
+};
+assert.equal(stretchResult.status, 'complete');
+assert.equal(stretchResult.autoApply.sourceMirrorHashAfter, stretchResult.autoApply.sourceMirrorHashBefore);
+
 process.stdout.write(`${JSON.stringify({
   status: 'complete',
   acceptedRecords: sync.job.result.acceptedRecords,
   conflicts: sync.job.result.conflicts,
   proposalsCreated: reconcile.job.result.proposalsCreated,
-  proposalsDeduplicated: reconcile.job.result.proposalsDeduplicated
+  proposalsDeduplicated: reconcile.job.result.proposalsDeduplicated,
+  groups: stretchResult.grouping.groupCount,
+  tickets: stretchResult.tickets.extracted,
+  autoApplied: stretchResult.autoApply.applied
 })}\n`);

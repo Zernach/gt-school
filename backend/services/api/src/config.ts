@@ -33,6 +33,7 @@ const environmentSchema = z.object({
   DEMO_REVIEWER_KEY: z.string().min(16).default('fixture-demo-reviewer-key-only'),
   SYNC_TRIGGER_SECRET: z.string().min(16).default('fixture-sync-trigger-secret-only'),
   RECONCILE_TRIGGER_SECRET: z.string().min(16).default('fixture-reconcile-trigger-secret-only'),
+  STRETCH_TRIGGER_SECRET: z.string().min(16).default('fixture-stretch-trigger-secret-only'),
   REQUEST_BODY_LIMIT_BYTES: positiveInteger(1_048_576),
   SOURCE_RECORD_LIMIT_BYTES: positiveInteger(262_144),
   SOURCE_TIMEOUT_MS: positiveInteger(5000),
@@ -51,7 +52,8 @@ const environmentSchema = z.object({
   CONFIG_ROOT: z.string().min(1).default(resolve(process.cwd(), 'config')),
   LOG_PRIVACY_MODE: z.enum(['redacted', 'full']).default('redacted'),
   LOG_RETENTION_DAYS: positiveInteger(30),
-  OSCILLATION_HOLD_THRESHOLD: positiveInteger(3)
+  OSCILLATION_HOLD_THRESHOLD: positiveInteger(3),
+  RECONCILE_SCHEDULE_MS: nonnegativeInteger(86_400_000)
 }).superRefine((value, context) => {
   if (value.PROVIDER_MODE === 'external' && !value.PROVIDER_API_KEY) {
     context.addIssue({ code: 'custom', path: ['PROVIDER_API_KEY'], message: 'required when PROVIDER_MODE=external' });

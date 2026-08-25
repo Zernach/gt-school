@@ -20,8 +20,8 @@ export function ConflictFiltersForm({ filters, onChange, disabled }: { filters: 
       <legend className="sr-only">Filter conflicts</legend>
       <label>Conflict type<select value={filters.type} onChange={(event) => set('type', event.target.value)}><option value="">All types</option>{TYPES.map((type) => <option key={type} value={type}>{humanize(type)}</option>)}</select></label>
       <label>Source<select value={filters.source} onChange={(event) => set('source', event.target.value)}><option value="">All sources</option><option value="crm">CRM</option><option value="app">App DB</option><option value="payments">Payments</option></select></label>
-      <label>Conflict status<select value={filters.status} onChange={(event) => set('status', event.target.value)}><option value="">All statuses</option><option value="active">Active</option><option value="resolved">Resolved</option><option value="oscillation_hold">Oscillation hold</option></select></label>
-      <label>Proposal status<select value={filters.proposalStatus} onChange={(event) => set('proposalStatus', event.target.value)}><option value="">Any proposal</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="held">Held</option></select></label>
+      <label>Conflict status<select value={filters.status} onChange={(event) => set('status', event.target.value)}><option value="">All statuses</option><option value="active">Active</option><option value="resolved">Resolved</option><option value="unchecked">Unchecked</option><option value="oscillation_hold">Oscillation hold</option></select></label>
+      <label>Proposal status<select value={filters.proposalStatus} onChange={(event) => set('proposalStatus', event.target.value)}><option value="">Any proposal</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="held">Held</option><option value="applied">Applied</option><option value="rolled_back">Rolled back</option></select></label>
       <label>Minimum confidence<select value={filters.minimumConfidence} onChange={(event) => set('minimumConfidence', event.target.value)}><option value="">Any confidence</option><option value="0.5">50%</option><option value="0.75">75%</option><option value="0.95">95%</option></select></label>
       <label>Seen since<input type="datetime-local" value={localDateTimeValue(filters.from)} onChange={(event) => set('from', event.target.value ? new Date(event.target.value).toISOString() : '')} /></label>
       <button type="button" className="secondary-button" onClick={() => onChange(EMPTY_FILTERS)}>Reset</button>
@@ -45,12 +45,12 @@ export function ConflictTable({ rows, selectedId, onSelect }: { rows: ConflictRo
         <tbody>{rows.map((row) => {
           const confidence = confidenceLabel(row.confidence_bp);
           return <tr key={row.id} className={selectedId === row.id ? 'selected-row' : undefined}>
-            <th scope="row"><button className="row-link" type="button" data-conflict-id={row.id} onClick={() => onSelect(row.id)} aria-pressed={selectedId === row.id}>{humanize(row.type)}</button><StatusBadge status={row.status} /></th>
+            <th scope="row"><div className="cell-stack"><button className="row-link" type="button" data-conflict-id={row.id} onClick={() => onSelect(row.id)} aria-pressed={selectedId === row.id}>{humanize(row.type)}</button><StatusBadge status={row.status} /></div></th>
             <td className="mono compact-cell">{row.entity_refs[0]}</td>
             <td><ul className="tag-list" aria-label="Sources">{row.sources_involved.map((source) => <li key={source}>{source}</li>)}</ul></td>
             <td>{row.disagreeing_fields.join(', ')}</td>
             <td><StatusBadge status={row.proposal_status ?? 'unchecked'} /></td>
-            <td><StatusBadge status={confidence.status} label={confidence.label} />{row.sensitive_hold ? <span className="hold-note">Sensitive hold</span> : null}</td>
+            <td><div className="cell-stack"><StatusBadge status={confidence.status} label={confidence.label} />{row.sensitive_hold ? <span className="hold-note">Sensitive hold</span> : null}</div></td>
             <td><time dateTime={row.last_seen_at}>{new Date(row.last_seen_at).toLocaleDateString()}</time></td>
           </tr>;
         })}</tbody>

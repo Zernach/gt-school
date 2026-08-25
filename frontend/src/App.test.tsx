@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import App from './App';
-import { ApiError, decideProposal, getConflict, getConflicts, getOverview, getProposals } from './api';
+import { ApiError, decideProposal, getConflict, getConflicts, getIncidentGroups, getOverview, getProposals, getTickets } from './api';
 import { conflictDetailFixture, conflictListFixture, overviewFixture, proposalFixture } from './test/fixtures';
 import type * as ApiModule from './api';
 
@@ -14,6 +14,8 @@ vi.mock('./api', async (importOriginal) => {
     getConflicts: vi.fn(),
     getConflict: vi.fn(),
     getProposals: vi.fn(),
+    getIncidentGroups: vi.fn(),
+    getTickets: vi.fn(),
     decideProposal: vi.fn()
   };
 });
@@ -22,6 +24,8 @@ const mockedGetOverview = vi.mocked(getOverview);
 const mockedGetConflicts = vi.mocked(getConflicts);
 const mockedGetConflict = vi.mocked(getConflict);
 const mockedGetProposals = vi.mocked(getProposals);
+const mockedGetIncidentGroups = vi.mocked(getIncidentGroups);
+const mockedGetTickets = vi.mocked(getTickets);
 const mockedDecideProposal = vi.mocked(decideProposal);
 
 beforeEach(() => {
@@ -29,6 +33,8 @@ beforeEach(() => {
   mockedGetConflicts.mockReset().mockResolvedValue(conflictListFixture());
   mockedGetConflict.mockReset().mockResolvedValue(conflictDetailFixture());
   mockedGetProposals.mockReset().mockResolvedValue([proposalFixture()]);
+  mockedGetIncidentGroups.mockReset().mockResolvedValue([]);
+  mockedGetTickets.mockReset().mockResolvedValue([]);
   mockedDecideProposal.mockReset().mockResolvedValue(proposalFixture({ status: 'held', version: 2 }));
 });
 
@@ -50,7 +56,7 @@ describe('dashboard shell', () => {
   it('renders a semantic main content region and footer guarantee', async () => {
     await renderLoadedApp();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
-    expect(screen.getByText('Core mode is proposal-only. Synthetic fixtures · deterministic rules · no source writer.')).toBeInTheDocument();
+    expect(screen.getByText('Proposals stay pending by default. Auto-apply is a separate gated function. Synthetic fixtures · no source writer.')).toBeInTheDocument();
   });
 
   it('shows evidence-connected only after overview resolution', async () => {
@@ -67,6 +73,10 @@ describe('dashboard shell', () => {
     expect(mockedGetConflicts.mock.calls[0]?.[1]).toBeUndefined();
     expect(mockedGetProposals).toHaveBeenCalledOnce();
     expect(mockedGetProposals.mock.calls[0]?.[0]).toBe('pending');
+    expect(mockedGetProposals.mock.calls[0]?.[2]).toEqual({ type: '', source: '' });
+    expect(mockedGetOverview.mock.calls[0]?.[1]).toBe('');
+    expect(mockedGetIncidentGroups).toHaveBeenCalledOnce();
+    expect(mockedGetTickets).toHaveBeenCalledOnce();
     expect(mockedGetConflict).not.toHaveBeenCalled();
   });
 
@@ -75,6 +85,8 @@ describe('dashboard shell', () => {
     expect(mockedGetOverview.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal);
     expect(mockedGetConflicts.mock.calls[0]?.[2]).toBeInstanceOf(AbortSignal);
     expect(mockedGetProposals.mock.calls[0]?.[1]).toBeInstanceOf(AbortSignal);
+    expect(mockedGetIncidentGroups.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal);
+    expect(mockedGetTickets.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal);
     expect(mockedGetOverview.mock.calls[0]?.[0]).not.toBe(mockedGetConflicts.mock.calls[0]?.[2]);
   });
 
@@ -83,13 +95,19 @@ describe('dashboard shell', () => {
     const overviewSignal = mockedGetOverview.mock.calls[0]?.[0];
     const conflictSignal = mockedGetConflicts.mock.calls[0]?.[2];
     const proposalSignal = mockedGetProposals.mock.calls[0]?.[1];
+    const groupSignal = mockedGetIncidentGroups.mock.calls[0]?.[0];
+    const ticketSignal = mockedGetTickets.mock.calls[0]?.[0];
     expect(overviewSignal?.aborted).toBe(false);
     expect(conflictSignal?.aborted).toBe(false);
     expect(proposalSignal?.aborted).toBe(false);
+    expect(groupSignal?.aborted).toBe(false);
+    expect(ticketSignal?.aborted).toBe(false);
     unmount();
     expect(overviewSignal?.aborted).toBe(true);
     expect(conflictSignal?.aborted).toBe(true);
     expect(proposalSignal?.aborted).toBe(true);
+    expect(groupSignal?.aborted).toBe(true);
+    expect(ticketSignal?.aborted).toBe(true);
   });
 });
 
@@ -98,11 +116,15 @@ describe('dashboard loading states', () => {
     mockedGetOverview.mockReturnValue(new Promise(() => undefined));
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     mockedGetProposals.mockReturnValue(new Promise(() => undefined));
+    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
+    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
     expect(screen.getByText('Refreshing evidence')).toBeInTheDocument();
     expect(screen.getByText('Loading current source and invariant evidence…')).toBeInTheDocument();
     expect(screen.getByText('Checking this evidence window…')).toBeInTheDocument();
     expect(screen.getByText('Loading proposal queue…')).toBeInTheDocument();
+    expect(screen.getByText('Loading incident groups…')).toBeInTheDocument();
+    expect(screen.getByText('Loading extracted tickets…')).toBeInTheDocument();
     expect(screen.getAllByText(/Loading|Checking/u).every((element) => element.closest('[aria-busy="true"]') !== null)).toBe(true);
   });
 
@@ -110,6 +132,8 @@ describe('dashboard loading states', () => {
     mockedGetOverview.mockReturnValue(new Promise(() => undefined));
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     mockedGetProposals.mockReturnValue(new Promise(() => undefined));
+    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
+    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   });
@@ -118,6 +142,8 @@ describe('dashboard loading states', () => {
     mockedGetOverview.mockReturnValue(new Promise(() => undefined));
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     mockedGetProposals.mockReturnValue(new Promise(() => undefined));
+    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
+    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
     expect(screen.getByRole('group', { name: 'Filter conflicts' })).toBeDisabled();
   });
@@ -139,8 +165,9 @@ describe('partial-source evidence', () => {
     overview.latestRun = { ...overview.latestRun!, status: 'partial', source_availability };
     mockedGetOverview.mockResolvedValue(overview);
     await renderLoadedApp();
-    const banner = screen.getByRole('status');
-    expect(within(banner).getByText('Incomplete source evidence')).toBeInTheDocument();
+    const banner = screen.getByText('Incomplete source evidence').closest('[role="status"]');
+    expect(banner).toBeInstanceOf(HTMLElement);
+    if (!(banner instanceof HTMLElement)) throw new Error('expected status banner');
     expect(within(banner).getByText(new RegExp(`${source} did not complete`, 'u'))).toBeInTheDocument();
     expect(within(banner).getByText(/Dependent rules are unchecked; absence has not been inferred/u)).toBeInTheDocument();
   });
@@ -211,6 +238,8 @@ describe('overview failure and retry', () => {
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -233,6 +262,8 @@ describe('conflict evidence interactions', () => {
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
   });
 
   it('refreshes all evidence windows from the explicit refresh button', async () => {
@@ -242,6 +273,8 @@ describe('conflict evidence interactions', () => {
     await waitFor(() => expect(mockedGetOverview).toHaveBeenCalledTimes(2));
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
   });
 
   it('resets pagination and refetches when conflict type changes', async () => {
@@ -314,9 +347,11 @@ describe('proposal queue interactions', () => {
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
   });
 
-  it.each(['', 'approved', 'rejected', 'held'])('refetches queue status %j', async (status) => {
+  it.each(['', 'approved', 'rejected', 'held', 'applied', 'rolled_back'])('refetches queue status %j', async (status) => {
     const user = userEvent.setup();
     await renderLoadedApp();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Queue status' }), status);
@@ -395,6 +430,8 @@ describe('conflict detail interactions', () => {
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
   });
 
   it('closes a detail error panel without retrying', async () => {
@@ -422,6 +459,8 @@ describe('review decision integration', () => {
     await waitFor(() => expect(mockedGetOverview).toHaveBeenCalledTimes(2));
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+    expect(mockedGetIncidentGroups).toHaveBeenCalledTimes(2);
+    expect(mockedGetTickets).toHaveBeenCalledTimes(2);
     expect(mockedGetConflict).toHaveBeenCalledTimes(2);
   });
 });

@@ -18,5 +18,21 @@ describe('Pages deployment contract', () => {
     expect(routes).toContain('"/api/*"');
     expect(routes).toContain('"/assets/*"');
     expect(routes).toContain('"/favicon.ico"');
+    expect(routes).toContain('"/favicon.svg"');
+  });
+
+  test('ships a browser-tab favicon as a static ICO plus SVG fallback', async () => {
+    const [html, ico, svg] = await Promise.all([
+      readFile(resolve(process.cwd(), 'index.html'), 'utf8'),
+      readFile(resolve(process.cwd(), 'public/favicon.ico')),
+      readFile(resolve(process.cwd(), 'public/favicon.svg'), 'utf8')
+    ]);
+    expect(html).toContain('href="/favicon.ico"');
+    expect(html).toContain('href="/favicon.svg"');
+    expect(ico.subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
+    expect(ico.byteLength).toBeGreaterThan(64);
+    expect(svg).toContain('viewBox="0 0 32 32"');
+    expect(svg).toContain('#00E5FF');
+    expect(svg).toContain('#7851A9');
   });
 });

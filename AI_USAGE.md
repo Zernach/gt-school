@@ -23,6 +23,6 @@ The price contract is `config/prices.v1.json`, version `prices-v1`, denominated 
 - output: 1 microcent per 1,000 tokens; and
 - reserved maximum: 10 microcents per call.
 
-The policy action comes from committed code before the provider runs. Provider output must echo the expected action fingerprint. Confidence is computed by `confidence-v1`, not emitted by the provider. Worst-case cost is transactionally reserved before every call.
+The policy action comes from committed code before the provider runs. Provider output must echo the expected action fingerprint. Confidence is computed by `confidence-v2`, not emitted by the provider. Worst-case cost is transactionally reserved before every call. Stretch auto-apply is a separate Keystone-internal function and still never writes a source system.
 
 `PROVIDER_MODE=external` is intentionally fail-closed and reports that an external provider is not implemented. No external API key was used in the demonstrated run, no prompt containing real PII was sent to a provider, and the repository makes no claim that local deterministic output proves production LLM quality.

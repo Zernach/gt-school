@@ -28,8 +28,8 @@ async function parseEnvelope<T>(response: Response): Promise<Envelope<T>> {
   return parsed as Envelope<T>;
 }
 
-export async function triggerAndWait(config: AppConfig, baseUrl: string, jobType: 'sync' | 'reconcile', idempotencyKey: string, generation = 3, pollTimeoutMs = 180_000): Promise<{ reference: JobReference; job: TerminalJob }> {
-  const secret = jobType === 'sync' ? config.SYNC_TRIGGER_SECRET : config.RECONCILE_TRIGGER_SECRET;
+export async function triggerAndWait(config: AppConfig, baseUrl: string, jobType: 'sync' | 'reconcile' | 'stretch', idempotencyKey: string, generation = 3, pollTimeoutMs = 180_000): Promise<{ reference: JobReference; job: TerminalJob }> {
+  const secret = jobType === 'sync' ? config.SYNC_TRIGGER_SECRET : jobType === 'reconcile' ? config.RECONCILE_TRIGGER_SECRET : config.STRETCH_TRIGGER_SECRET;
   const trigger = await fetch(`${baseUrl}/api/v1/jobs/${jobType}`, {
     method: 'POST',
     headers: {

@@ -1,4 +1,4 @@
-import { ApiError, decideProposal, getConflict, getConflicts, getOverview, getProposals } from './api';
+import { ApiError, decideProposal, getConflict, getConflicts, getIncidentGroups, getOverview, getProposals, getTickets, rollbackProposal } from './api';
 import { conflictDetailFixture, conflictListFixture, emptyFilters, overviewFixture, proposalFixture } from './test/fixtures';
 
 function response(payload: unknown, status = 200, headers: Record<string, string> = { 'content-type': 'application/json' }): Response {
@@ -138,6 +138,12 @@ describe('overview request', () => {
     expect(fetchMock()).toHaveBeenCalledOnce();
     expect(fetchMock().mock.calls[0]?.[0]).toBe('/api/v1/overview');
   });
+
+  it('serializes a selected evidence window', async () => {
+    fetchMock().mockResolvedValue(response({ data: overviewFixture(), requestId: 'request-1' }));
+    await getOverview(undefined, '2026-01-15T12:00:00.000Z');
+    expect(fetchMock().mock.calls[0]?.[0]).toBe('/api/v1/overview?from=2026-01-15T12%3A00%3A00.000Z');
+  });
 });
 
 describe('conflict list request', () => {
@@ -230,6 +236,18 @@ describe('proposal list request', () => {
     fetchMock().mockResolvedValue(response({ data: expected, requestId: 'request-1' }));
     await expect(getProposals('pending')).resolves.toEqual(expected);
   });
+
+  it('serializes type and source filters', async () => {
+    fetchMock().mockResolvedValue(response({ data: [proposalFixture()], requestId: 'request-1' }));
+    await getProposals('pending', undefined, { type: 'paid_but_no_deal', source: 'payments' });
+    const url = new URL(String(fetchMock().mock.calls[0]?.[0]), 'https://keystone.example');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      limit: '50',
+      status: 'pending',
+      type: 'paid_but_no_deal',
+      source: 'payments'
+    });
+  });
 });
 
 describe('proposal decision request', () => {
@@ -247,5 +265,28 @@ describe('proposal decision request', () => {
     fetchMock().mockResolvedValue(response({ error: { code: 'stale_version', message: 'Reload before deciding.' }, requestId: 'stale-request' }, 409));
     await expect(decideProposal('proposal-1', 'approve', 'Reviewed', 1)).rejects.toMatchObject({ code: 'stale_version' });
     expect(fetchMock()).toHaveBeenCalledOnce();
+  });
+});
+
+describe('stretch dashboard requests', () => {
+  it('loads incident groups from the versioned endpoint', async () => {
+    fetchMock().mockResolvedValue(response({ data: [{ id: 'incgrp_paid', label: 'paid_but_no_deal', member_count: 12, created_at: '2026-01-15T12:00:00.000Z', nearest_group_id: null }], requestId: 'request-1' }));
+    await expect(getIncidentGroups()).resolves.toHaveLength(1);
+    expect(fetchMock().mock.calls[0]?.[0]).toBe('/api/v1/incident-groups?limit=50');
+  });
+
+  it('loads extracted tickets from the versioned endpoint', async () => {
+    fetchMock().mockResolvedValue(response({ data: [], requestId: 'request-1' }));
+    await expect(getTickets()).resolves.toEqual([]);
+    expect(fetchMock().mock.calls[0]?.[0]).toBe('/api/v1/tickets?limit=50');
+  });
+
+  it('posts a rollback without a body', async () => {
+    const expected = proposalFixture({ status: 'rolled_back', version: 3 });
+    fetchMock().mockResolvedValue(response({ data: expected, requestId: 'request-1' }));
+    await expect(rollbackProposal('proposal/id')).resolves.toEqual(expected);
+    const [url, options] = fetchMock().mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/proposals/proposal%2Fid/rollback');
+    expect(options.method).toBe('POST');
   });
 });

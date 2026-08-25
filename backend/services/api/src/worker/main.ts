@@ -3,11 +3,15 @@ import { hostname } from 'node:os';
 import { createClient, type RedisClientType } from 'redis';
 import { z } from 'zod';
 import { loadConfig } from '../config.js';
+import { loadInvariantRegistry } from '../domain/invariant-registry.js';
+import { redactMetadata } from '../domain/redaction.js';
 import { synchronize } from '../ingestion/sync.js';
+import { dueScheduledReconcile, enqueueScheduledReconcile } from '../jobs/schedule.js';
 import { publishReadyJobs } from '../jobs/service.js';
 import { createPool, databaseReady, inTransaction } from '../persistence/database.js';
 import { createProvider } from '../reconciliation/provider.js';
 import { reconcileConflicts } from '../reconciliation/reconcile.js';
+import { runStretchOps } from '../reconciliation/stretch.js';
 import { createSourceAdapters } from '../sources/index.js';
 
 const jobPayloadSchema = z.object({
@@ -19,7 +23,7 @@ const jobPayloadSchema = z.object({
 interface JobRow {
   id: string;
   tenant_id: string;
-  job_type: 'sync' | 'reconcile';
+  job_type: 'sync' | 'reconcile' | 'stretch';
   request_id: string;
   idempotency_key: string;
   payload: unknown;
@@ -28,14 +32,16 @@ interface JobRow {
 }
 
 const config = loadConfig();
+loadInvariantRegistry(config.CONFIG_ROOT);
 const pool = createPool(config.DATABASE_URL, 'keystone-worker');
 const queue: RedisClientType = createClient({ url: config.QUEUE_URL });
 const consumer = `${hostname()}-${process.pid}`;
 let stopping = false;
 let lastLoopAt = Date.now();
+let lastScheduledAt = 0;
 
 function log(event: string, detail: Record<string, unknown> = {}): void {
-  process.stdout.write(`${JSON.stringify({ level: 'info', service: 'worker', event, ...detail, at: new Date().toISOString() })}\n`);
+  process.stdout.write(`${JSON.stringify({ level: 'info', service: 'worker', event, ...redactMetadata(detail, config.LOG_PRIVACY_MODE) as Record<string, unknown>, at: new Date().toISOString() })}\n`);
 }
 
 async function claimJob(jobId: string): Promise<JobRow | undefined> {
@@ -63,8 +69,10 @@ async function executeJob(jobId: string): Promise<void> {
         idempotencyKey: `job:${job.id}`,
         requestId: job.request_id
       });
-    } else {
+    } else if (job.job_type === 'reconcile') {
       result = await reconcileConflicts(pool, config, createProvider(config), { tenantId: job.tenant_id, jobId: job.id, requestId: job.request_id });
+    } else {
+      result = await runStretchOps(pool, config, { tenantId: job.tenant_id, requestId: job.request_id });
     }
     const halted = typeof result === 'object' && result !== null && 'status' in result && result.status === 'halted';
     await pool.query(`UPDATE jobs SET status = $2, result = $3::jsonb, completed_at = now() WHERE id = $1`, [job.id, halted ? 'halted' : 'complete', JSON.stringify(result)]);
@@ -72,8 +80,9 @@ async function executeJob(jobId: string): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'job_failed';
     const terminal = job.attempt_count >= job.max_attempts;
-    await pool.query(`UPDATE jobs SET status = $2, last_error = $3, next_attempt_at = now() + (LEAST(attempt_count, 5) * interval '2 seconds'), completed_at = CASE WHEN $2 = 'failed' THEN now() ELSE NULL END WHERE id = $1`, [job.id, terminal ? 'failed' : 'retry_wait', message.slice(0, 1000)]);
-    log('job_failed', { jobId: job.id, jobType: job.job_type, terminal, error: message });
+    const safeError = String(redactMetadata(message.slice(0, 1000), config.LOG_PRIVACY_MODE)).slice(0, 1000);
+    await pool.query(`UPDATE jobs SET status = $2, last_error = $3, next_attempt_at = now() + (LEAST(attempt_count, 5) * interval '2 seconds'), completed_at = CASE WHEN $2 = 'failed' THEN now() ELSE NULL END WHERE id = $1`, [job.id, terminal ? 'failed' : 'retry_wait', safeError]);
+    log('job_failed', { jobId: job.id, jobType: job.job_type, terminal, error: safeError });
   }
 }
 
@@ -93,6 +102,10 @@ async function consume(): Promise<void> {
   }
   while (!stopping) {
     lastLoopAt = Date.now();
+    if (dueScheduledReconcile(lastScheduledAt, lastLoopAt, config.RECONCILE_SCHEDULE_MS)) {
+      await enqueueScheduledReconcile(pool, queue, config);
+      lastScheduledAt = lastLoopAt;
+    }
     await publishReadyJobs(pool, queue, config.QUEUE_STREAM);
     const claimed = await queue.xAutoClaim(config.QUEUE_STREAM, config.QUEUE_CONSUMER_GROUP, consumer, config.QUEUE_CLAIM_IDLE_MS, '0-0', { COUNT: 10 });
     const reclaimed = claimed.messages.filter((message): message is NonNullable<typeof message> => message !== null);

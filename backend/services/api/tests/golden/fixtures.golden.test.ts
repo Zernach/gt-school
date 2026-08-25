@@ -1,11 +1,14 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { GoldenConflict } from '../../src/domain/fixture-types.js';
 import { conflictTypes } from '../../src/domain/fixture-types.js';
 import { evaluateInvariants } from '../../src/domain/invariants.js';
 import { CANONICAL_SEED, generateFixtures, REQUIRED_COUNTS } from '../../src/fixtures/generator.js';
 import { loadFixtureSet, readMalformedFixture } from '../../src/fixtures/reader.js';
+import { buildCanonicalProjection, shapePublicEntityView } from '../../src/ingestion/projection.js';
+
+const committedGoldenRoot = resolve(import.meta.dirname, '../../../../../golden');
 
 let workspace = '';
 let fixtureRoot = '';
@@ -164,6 +167,20 @@ describe('golden invariant scorecard', () => {
     expect(paidWithoutDeal).toHaveLength(500);
     expect(paidWithoutDeal.some(({ entity_refs }) => entity_refs.some((ref) => leadRefs.has(ref)))).toBe(false);
   }, 30_000);
+
+  it('matches the committed golden oracles byte-for-byte', async () => {
+    expect(await readFile(join(goldenRoot, 'conflicts.json'), 'utf8')).toBe(await readFile(join(committedGoldenRoot, 'conflicts.json'), 'utf8'));
+    expect(await readFile(join(goldenRoot, 'clean-sample.json'), 'utf8')).toBe(await readFile(join(committedGoldenRoot, 'clean-sample.json'), 'utf8'));
+    expect(await readFile(join(goldenRoot, 'entity-view.json'), 'utf8')).toBe(await readFile(join(committedGoldenRoot, 'entity-view.json'), 'utf8'));
+  });
+
+  it('projects the committed entity-view from raw fixtures without internal raw payloads', async () => {
+    const fixtures = await loadFixtureSet(fixtureRoot, 3);
+    const committed = JSON.parse(await readFile(join(committedGoldenRoot, 'entity-view.json'), 'utf8')) as { entity_id: string };
+    const view = shapePublicEntityView(buildCanonicalProjection(fixtures), committed.entity_id);
+    expect(view).toEqual(JSON.parse(await readFile(join(committedGoldenRoot, 'entity-view.json'), 'utf8')));
+    expect(view).not.toHaveProperty('summary.raw');
+  }, 30_000);
 });
 
 describe('adversarial generations', () => {
@@ -216,5 +233,6 @@ describe('byte-for-byte determinism', () => {
     expect(secondManifest.metrics).toEqual(manifest.metrics);
     expect(await readFile(join(secondGoldenRoot, 'conflicts.json'), 'utf8')).toBe(await readFile(join(goldenRoot, 'conflicts.json'), 'utf8'));
     expect(await readFile(join(secondGoldenRoot, 'clean-sample.json'), 'utf8')).toBe(await readFile(join(goldenRoot, 'clean-sample.json'), 'utf8'));
+    expect(await readFile(join(secondGoldenRoot, 'entity-view.json'), 'utf8')).toBe(await readFile(join(goldenRoot, 'entity-view.json'), 'utf8'));
   }, 30_000);
 });

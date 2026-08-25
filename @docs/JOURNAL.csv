@@ -58,3 +58,15 @@ Take full ownership of exceeding all expectation in the @docs/REQUIREMENTS.md
 
 There should be more tests than there is code, to ensure all edge cases are handled and our codebase is durable, maintainable.",2026-08-22T12:03:30-04:00,unavailable,8806
 Cloudflare zprofile release routing and deployment,"we must use the zprofile's usewithoutvpn script to bypass 403 errors, and we also do not need a cloudflare api token. Figure out a different way. Refer to to ~/code/nexben",2026-08-24T19:40:04-04:00,unavailable,unavailable
+Added Keystone favicon.ico to the browser tab,there should be an ico icon in the browser tab,2026-08-24T20:47:39-04:00,unavailable,279
+Updated consolidated Keystone README,"update the readme so it is concise + impactful. Consolidate. Dry.
+
+Also, the beginning of the readme should mention the live gt-school.pages.dev frontend and provide the backend url:
+https://gt-school-demo-api.rough-base-9dc1.workers.dev/ready",2026-08-24T20:51:55-0400,unavailable,unavailable
+Left-aligned all data table column content,all data table columns content should be left-aligned,2026-08-24T20:53:04-0400,unavailable,620
+Validated and closed Core requirements 1-6,"spin up subagents to check + validate whether each core requirement is completed, and improve
+
+@REQUIREMENTS.md (58-65) ",2026-08-24T20:58:56-0400,unavailable,1016
+Implement REQUIREMENTS stretch goals 7-10 end-to-end,"Plan & implement end-to-end all stretch goals
+
+@REQUIREMENTS.md (67-72) ",2026-08-24T21:03:20-04:00,unavailable,1460

@@ -3,16 +3,18 @@ import { scoreConfidence, signalsForConflict, type ConfidenceSignals } from '../
 import type { ConflictType, DetectedConflict } from '../../src/domain/fixture-types.js';
 import { buildConflict } from '../../src/domain/invariants.js';
 import { candidateAction, canAutoApply, SENSITIVE_FIELDS } from '../../src/domain/policy.js';
-import { transitionProposal, type ProposalDecision, type ProposalStatus } from '../../src/domain/proposal-state.js';
+import { transitionAutoApply, transitionProposal, transitionRollback, type ProposalDecision, type ProposalStatus } from '../../src/domain/proposal-state.js';
 import { assertMicrocents, canReserve, reserve, settle } from '../../src/domain/spend.js';
 
 const baseSignals: ConfidenceSignals = {
   hardIdAgreement: false,
   exactEmailAgreement: false,
   exactNameDobAgreement: false,
+  uniqueCanonicalMatch: false,
   agreeingFieldRatioBp: 0,
   disagreementRatioBp: 0,
   missingEvidence: false,
+  evidenceComplete: false,
   sensitiveAction: false
 };
 
@@ -22,7 +24,7 @@ function conflict(type: ConflictType): DetectedConflict {
 
 describe('deterministic confidence policy', () => {
   it('returns the baseline score and policy version', () => {
-    expect(scoreConfidence(baseSignals)).toEqual({ scoreBp: 500, score: 0.05, version: 'confidence-v1', signals: baseSignals });
+    expect(scoreConfidence(baseSignals)).toEqual({ scoreBp: 500, score: 0.05, version: 'confidence-v2', signals: baseSignals });
   });
 
   it('adds hard ID agreement weight', () => {
@@ -35,6 +37,14 @@ describe('deterministic confidence policy', () => {
 
   it('adds exact name+DOB agreement weight', () => {
     expect(scoreConfidence({ ...baseSignals, exactNameDobAgreement: true }).scoreBp).toBe(2500);
+  });
+
+  it('adds unique canonical match weight', () => {
+    expect(scoreConfidence({ ...baseSignals, uniqueCanonicalMatch: true }).scoreBp).toBe(2500);
+  });
+
+  it('adds complete-evidence weight', () => {
+    expect(scoreConfidence({ ...baseSignals, evidenceComplete: true }).scoreBp).toBe(1500);
   });
 
   it('adds the agreeing-field ratio contribution', () => {
@@ -58,7 +68,27 @@ describe('deterministic confidence policy', () => {
   });
 
   it('clamps a score above one to 10,000 basis points', () => {
-    expect(scoreConfidence({ ...baseSignals, hardIdAgreement: true, exactEmailAgreement: true, exactNameDobAgreement: true, agreeingFieldRatioBp: 10_000 }).scoreBp).toBe(9500);
+    expect(scoreConfidence({
+      ...baseSignals,
+      hardIdAgreement: true,
+      exactEmailAgreement: true,
+      exactNameDobAgreement: true,
+      uniqueCanonicalMatch: true,
+      agreeingFieldRatioBp: 10_000,
+      evidenceComplete: true
+    }).scoreBp).toBe(10_000);
+  });
+
+  it('lets a complete non-sensitive linkage pattern reach the auto-apply threshold', () => {
+    expect(scoreConfidence({
+      ...baseSignals,
+      hardIdAgreement: true,
+      exactEmailAgreement: true,
+      uniqueCanonicalMatch: true,
+      agreeingFieldRatioBp: 7500,
+      disagreementRatioBp: 2000,
+      evidenceComplete: true
+    }).scoreBp).toBeGreaterThanOrEqual(9500);
   });
 
   it('is deterministic for the same signals', () => {
@@ -67,9 +97,11 @@ describe('deterministic confidence policy', () => {
         hardIdAgreement: fc.boolean(),
         exactEmailAgreement: fc.boolean(),
         exactNameDobAgreement: fc.boolean(),
+        uniqueCanonicalMatch: fc.boolean(),
         agreeingFieldRatioBp: fc.integer({ min: 0, max: 10_000 }),
         disagreementRatioBp: fc.integer({ min: 0, max: 10_000 }),
         missingEvidence: fc.boolean(),
+        evidenceComplete: fc.boolean(),
         sensitiveAction: fc.boolean()
       }),
       (signals) => {
@@ -84,9 +116,11 @@ describe('deterministic confidence policy', () => {
         hardIdAgreement: fc.boolean(),
         exactEmailAgreement: fc.boolean(),
         exactNameDobAgreement: fc.boolean(),
+        uniqueCanonicalMatch: fc.boolean(),
         agreeingFieldRatioBp: fc.integer({ min: -100_000, max: 100_000 }),
         disagreementRatioBp: fc.integer({ min: -100_000, max: 100_000 }),
         missingEvidence: fc.boolean(),
+        evidenceComplete: fc.boolean(),
         sensitiveAction: fc.boolean()
       }),
       (signals) => {
@@ -124,6 +158,12 @@ describe('signalsForConflict', () => {
   it('captures name+DOB evidence for C4', () => {
     const value = buildConflict('cross_source_email_mismatch', ['student:test', 'crm:test'], ['app', 'crm'], ['email']);
     expect(signalsForConflict(value, false).exactNameDobAgreement).toBe(true);
+  });
+
+  it('marks unique canonical match and complete evidence for ordinary multi-source cases', () => {
+    const signals = signalsForConflict(conflict('paid_but_no_deal'), false);
+    expect(signals.uniqueCanonicalMatch).toBe(true);
+    expect(signals.evidenceComplete).toBe(true);
   });
 
   it.each(['payment_with_no_person', 'required_source_missing'] as const)('penalizes missing evidence for %s', (type) => {
@@ -207,13 +247,18 @@ describe('candidate action allowlist', () => {
 describe('auto-apply gate remains separate from Core', () => {
   const ordinary = candidateAction(conflict('paid_but_no_deal'));
   const sensitive = candidateAction(conflict('sensitive_field_only_fix'));
+  const unapproved = candidateAction(conflict('payment_with_no_person'));
 
   it('requires confidence at or above 0.95', () => {
     expect(canAutoApply(ordinary, 9499, true, true)).toBe(false);
     expect(canAutoApply(ordinary, 9500, true, true)).toBe(true);
   });
 
-  it('requires reviewer approval', () => {
+  it('requires an approved case type', () => {
+    expect(canAutoApply(unapproved, 10_000, true, true)).toBe(false);
+  });
+
+  it('requires complete evidence', () => {
     expect(canAutoApply(ordinary, 10_000, false, true)).toBe(false);
   });
 
@@ -230,8 +275,8 @@ describe('auto-apply gate remains separate from Core', () => {
     [9500, false, false],
     [9500, true, false],
     [10_000, false, true]
-  ])('does not pass partial gate confidence=%d approved=%s rollback=%s', (confidence, approved, rollback) => {
-    expect(canAutoApply(ordinary, confidence, approved, rollback)).toBe(false);
+  ])('does not pass partial gate confidence=%d evidenceComplete=%s rollback=%s', (confidence, evidenceComplete, rollback) => {
+    expect(canAutoApply(ordinary, confidence, evidenceComplete, rollback)).toBe(false);
   });
 });
 
@@ -313,8 +358,15 @@ describe('proposal state transitions', () => {
     expect(transitionProposal('pending', decision)).toBe(expected);
   });
 
-  it.each(['approved', 'rejected', 'held', 'superseded'] as ProposalStatus[])('rejects a second decision from terminal status %s', (status) => {
+  it.each(['approved', 'rejected', 'held', 'superseded', 'applied', 'rolled_back'] as ProposalStatus[])('rejects a second decision from terminal status %s', (status) => {
     expect(() => transitionProposal(status, 'approve')).toThrow('proposal_transition_illegal');
+  });
+
+  it('auto-applies only from pending and rolls back only from applied', () => {
+    expect(transitionAutoApply('pending')).toBe('applied');
+    expect(transitionRollback('applied')).toBe('rolled_back');
+    expect(() => transitionAutoApply('approved')).toThrow('proposal_transition_illegal');
+    expect(() => transitionRollback('pending')).toThrow('proposal_transition_illegal');
   });
 
   it('does not mutate input status', () => {

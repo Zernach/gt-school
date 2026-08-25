@@ -1,6 +1,6 @@
 import type { SourceRecord } from '../../src/sources/adapter.js';
 import { lineageForRecord } from '../../src/ingestion/lineage.js';
-import { buildCanonicalProjection, normalizedDisplayName } from '../../src/ingestion/projection.js';
+import { buildCanonicalProjection, normalizedDisplayName, shapePublicEntityView } from '../../src/ingestion/projection.js';
 import { cleanFixture, makeContact, makePayment, makeStudent, siblingFixture } from '../helpers/fixtures.js';
 
 function record(entityKind: string, payload: Record<string, unknown>, sourceKind: 'crm' | 'app' | 'payments' = 'app'): SourceRecord {
@@ -276,6 +276,23 @@ describe('canonical projection', () => {
       enrollment: fixtures.appEnrollments[0],
       deals: fixtures.crmDeals
     });
+  });
+
+  it('strips internal raw payloads from the public entity oracle', () => {
+    const fixtures = cleanFixture();
+    const projection = buildCanonicalProjection(fixtures);
+    const view = shapePublicEntityView(projection, projection.entities[0]!.id);
+    expect(view.summary).toEqual({
+      student_id: makeStudent().id,
+      registered: true,
+      enrollment_stage: 'registered',
+      paid: true,
+      payment_statuses: ['paid'],
+      crm_stage: 'closed_won',
+      crm_contact_ids: ['crm-0'],
+      payment_ids: ['payment-record-0']
+    });
+    expect(view).not.toHaveProperty('summary.raw');
   });
 
   it('keeps siblings distinct even when guardians and household match', () => {

@@ -14,10 +14,10 @@ describe('proposal queue', () => {
   it('offers all supported queue states', () => {
     render(<ProposalQueue proposals={[]} status="" onStatus={vi.fn()} onConflict={vi.fn()} />);
     const select = screen.getByRole('combobox', { name: 'Queue status' });
-    expect(within(select).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'pending', 'approved', 'rejected', 'held']);
+    expect(within(select).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'pending', 'approved', 'rejected', 'held', 'applied', 'rolled_back']);
   });
 
-  it.each(['', 'pending', 'approved', 'rejected', 'held'])('reflects controlled status %j', (status) => {
+  it.each(['', 'pending', 'approved', 'rejected', 'held', 'applied', 'rolled_back'])('reflects controlled status %j', (status) => {
     render(<ProposalQueue proposals={[]} status={status} onStatus={vi.fn()} onConflict={vi.fn()} />);
     expect(screen.getByRole('combobox', { name: 'Queue status' })).toHaveValue(status);
   });
@@ -28,6 +28,23 @@ describe('proposal queue', () => {
     render(<ProposalQueue proposals={[]} status="pending" onStatus={onStatus} onConflict={vi.fn()} />);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Queue status' }), 'held');
     expect(onStatus).toHaveBeenCalledWith('held');
+  });
+
+  it('offers type and source filters for the proposal queue', () => {
+    render(<ProposalQueue proposals={[]} status="pending" onStatus={vi.fn()} onType={vi.fn()} onSource={vi.fn()} onConflict={vi.fn()} />);
+    expect(screen.getByRole('combobox', { name: 'Queue conflict type' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Queue source' })).toBeInTheDocument();
+  });
+
+  it('notifies its owner when type or source changes', async () => {
+    const user = userEvent.setup();
+    const onType = vi.fn();
+    const onSource = vi.fn();
+    render(<ProposalQueue proposals={[]} status="pending" type="" source="" onStatus={vi.fn()} onType={onType} onSource={onSource} onConflict={vi.fn()} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Queue conflict type' }), 'paid_but_no_deal');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Queue source' }), 'payments');
+    expect(onType).toHaveBeenCalledWith('paid_but_no_deal');
+    expect(onSource).toHaveBeenCalledWith('payments');
   });
 
   it('renders a defined empty queue state', () => {
@@ -45,7 +62,7 @@ describe('proposal queue', () => {
     render(<ProposalQueue proposals={[proposalFixture()]} status="pending" onStatus={vi.fn()} onConflict={vi.fn()} />);
     expect(screen.getByText('Pending', { selector: '.status-badge' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paid But No Deal' })).toBeInTheDocument();
-    expect(screen.getByText('75% evidence · student:11111111-1111-4111-8111-111111111111')).toBeInTheDocument();
+    expect(screen.getByText('75% evidence · student:11111111-1111-4111-8111-111111111111 · app, crm, payments')).toBeInTheDocument();
   });
 
   it.each([

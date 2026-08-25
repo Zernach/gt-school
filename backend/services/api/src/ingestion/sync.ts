@@ -83,10 +83,11 @@ async function insertRecords(pool: DatabasePool, tenantId: string, snapshotId: s
       FROM jsonb_to_recordset($3::jsonb) AS row(source_kind text, entity_kind text, source_id text, occurrence integer, payload jsonb, payload_hash text, observed_at text)
       ON CONFLICT (snapshot_id, entity_kind, source_id, occurrence) DO NOTHING`, [tenantId, snapshotId, JSON.stringify(batch)]);
   }
-  const persisted = await pool.query<{ id: string; source_kind: SourceKind; entity_kind: string; source_id: string }>(
-    'SELECT id, source_kind, entity_kind, source_id FROM source_records WHERE tenant_id = $1 AND snapshot_id = $2',
+  const persisted = await pool.query<{ id: string; source_kind: SourceKind; entity_kind: string; source_id: string; ingested_at: string }>(
+    'SELECT id, source_kind, entity_kind, source_id, ingested_at FROM source_records WHERE tenant_id = $1 AND snapshot_id = $2',
     [tenantId, snapshotId]
   );
+  if (persisted.rows.some(({ ingested_at }) => !ingested_at)) throw new Error('ingested_at_missing');
   const recordIds = new Map(persisted.rows.map((row) => [`${row.source_kind}:${row.entity_kind}:${row.source_id}`, Number(row.id)]));
   const lineageRows: Array<Record<string, unknown>> = [];
   for (const record of records) {
@@ -281,6 +282,11 @@ export async function synchronize(pool: DatabasePool, adapters: readonly ReadOnl
     const unchecked = evaluateInvariants({ crmContacts: [], crmDeals: [], appStudents: [], appEnrollments: [], payments: [] }, availability).uncheckedRules;
     await pool.query(`INSERT INTO invariant_runs(id, tenant_id, sync_run_id, rule_set_version, status, source_availability, summary, completed_at)
       VALUES ($1, $2, $3, $4, 'partial', $5::jsonb, $6::jsonb, now()) ON CONFLICT (id) DO NOTHING`, [invariantRunId, request.tenantId, runId, RULE_SET_VERSION, JSON.stringify(availability), JSON.stringify({ pass: 0, fail: 0, unchecked: unchecked.length, error: 0, reasons: unchecked })]);
+    if (unchecked.length) {
+      await pool.query(`INSERT INTO invariant_results(tenant_id, invariant_run_id, rule_id, rule_version, entity_ref, verdict, evidence, conflict_key, reason)
+        SELECT $1, $2, row.rule_id, '1.0.0', row.entity_ref, 'unchecked', '{}'::jsonb, NULL, row.reason
+        FROM jsonb_to_recordset($3::jsonb) AS row(rule_id text, entity_ref text, reason text)`, [request.tenantId, invariantRunId, JSON.stringify(unchecked.map(({ ruleId, reason }) => ({ rule_id: ruleId, entity_ref: `rule:${ruleId}`, reason })))]);
+    }
   }
   const status: SyncResult['status'] = allComplete ? 'complete' : completeSnapshots.length > 0 ? 'partial' : 'failed';
   const result: SyncResult = { runId, status, generation: request.generation, sourceAvailability: availability, acceptedRecords, conflicts: conflictCount, mirrorHash, durationMs: Math.round(performance.now() - started) };

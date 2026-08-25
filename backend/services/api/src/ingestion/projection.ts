@@ -1,3 +1,4 @@
+import { publicEntitySummary } from '../domain/dashboard-reconciliation.js';
 import type { FixtureSet } from '../domain/fixture-types.js';
 import { resolveFixtureIdentities } from '../domain/identity.js';
 import { normalizeEmail, normalizeName } from '../domain/normalization.js';
@@ -131,6 +132,24 @@ export function buildCanonicalProjection(fixtures: FixtureSet): ProjectionResult
   links.sort((left, right) => `${left.canonicalId}:${left.sourceKind}:${left.sourceId}`.localeCompare(`${right.canonicalId}:${right.sourceKind}:${right.sourceId}`));
   households.sort((left, right) => left.id.localeCompare(right.id));
   return { entities, links, households };
+}
+
+export function shapePublicEntityView(projection: ProjectionResult, entityId: string): Record<string, unknown> {
+  const entity = projection.entities.find(({ id }) => id === entityId);
+  if (!entity) throw new Error(`entity_view_missing:${entityId}`);
+  const links = projection.links
+    .filter(({ canonicalId }) => canonicalId === entityId)
+    .map(({ sourceKind, entityKind, sourceId }) => ({ source_kind: sourceKind, entity_kind: entityKind, source_id: sourceId }))
+    .sort((left, right) => `${left.source_kind}:${left.entity_kind}:${left.source_id}`.localeCompare(`${right.source_kind}:${right.entity_kind}:${right.source_id}`));
+  return {
+    entity_id: entity.id,
+    display_name: entity.displayName,
+    resolution_status: entity.resolutionStatus,
+    match_method: entity.matchMethod,
+    match_score_bp: entity.matchScoreBp,
+    summary: publicEntitySummary(entity.summary),
+    links
+  };
 }
 
 export function normalizedDisplayName(firstName: string, lastName: string): string {

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, getConflict, getConflicts, getOverview, getProposals } from './api';
+import { ApiError, getConflict, getConflicts, getIncidentGroups, getOverview, getProposals, getTickets } from './api';
 import { ConflictDetail } from './components/ConflictDetail';
 import { ConflictFiltersForm, ConflictTable, EMPTY_FILTERS } from './components/ConflictTable';
+import { IncidentGroups } from './components/IncidentGroups';
 import { Overview } from './components/Overview';
 import { ProposalQueue } from './components/ProposalQueue';
 import { StatusBadge } from './components/StatusBadge';
-import type { ConflictDetail as ConflictDetailType, ConflictFilters, ConflictList, OverviewData, Proposal } from './types';
+import { TicketTable } from './components/TicketTable';
+import type { ConflictDetail as ConflictDetailType, ConflictFilters, ConflictList, ExtractedTicket, IncidentGroup, OverviewData, Proposal } from './types';
 
 interface LoadState<T> { loading: boolean; data: T | null; error: string; }
 const loading = <T,>(): LoadState<T> => ({ loading: true, data: null, error: '' });
@@ -22,7 +24,11 @@ export default function App() {
   const [overview, setOverview] = useState<LoadState<OverviewData>>(loading);
   const [conflicts, setConflicts] = useState<LoadState<ConflictList>>(loading);
   const [proposalStatus, setProposalStatus] = useState('pending');
+  const [proposalType, setProposalType] = useState('');
+  const [proposalSource, setProposalSource] = useState('');
   const [proposals, setProposals] = useState<LoadState<Proposal[]>>(loading);
+  const [groups, setGroups] = useState<LoadState<IncidentGroup[]>>(loading);
+  const [tickets, setTickets] = useState<LoadState<ExtractedTicket[]>>(loading);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<LoadState<ConflictDetailType>>({ loading: false, data: null, error: '' });
   const [refresh, setRefresh] = useState(0);
@@ -31,9 +37,9 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void getOverview(controller.signal).then((data) => setOverview({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setOverview({ loading: false, data: null, error: message }); });
+    void getOverview(controller.signal, filters.from).then((data) => setOverview({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setOverview({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [refresh]);
+  }, [refresh, filters.from]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,9 +49,21 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void getProposals(proposalStatus, controller.signal).then((data) => setProposals({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setProposals({ loading: false, data: null, error: message }); });
+    void getProposals(proposalStatus, controller.signal, { type: proposalType, source: proposalSource }).then((data) => setProposals({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setProposals({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [proposalStatus, refresh]);
+  }, [proposalStatus, proposalType, proposalSource, refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getIncidentGroups(controller.signal).then((data) => setGroups({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setGroups({ loading: false, data: null, error: message }); });
+    return () => controller.abort();
+  }, [refresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void getTickets(controller.signal).then((data) => setTickets({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setTickets({ loading: false, data: null, error: message }); });
+    return () => controller.abort();
+  }, [refresh]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -59,12 +77,16 @@ export default function App() {
     setOverview(loading());
     setConflicts(loading());
     setProposals(loading());
+    setGroups(loading());
+    setTickets(loading());
     if (selectedId) setDetail(loading());
     setRefresh((value) => value + 1);
   };
   const changeFilters = (next: ConflictFilters) => { setConflicts(loading()); setCursor(undefined); setFilters(next); };
   const changePage = (nextCursor?: string) => { setConflicts(loading()); setCursor(nextCursor); };
   const changeProposalStatus = (status: string) => { setProposals(loading()); setProposalStatus(status); };
+  const changeProposalType = (type: string) => { setProposals(loading()); setProposalType(type); };
+  const changeProposalSource = (source: string) => { setProposals(loading()); setProposalSource(source); };
   const selectConflict = (id: string) => { selectedTriggerId.current = id; setDetail(loading()); setSelectedId(id); };
   const closeDetail = () => {
     setSelectedId(null);
@@ -90,10 +112,12 @@ export default function App() {
           {conflicts.loading ? <div className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Checking this evidence window…</p></div> : conflicts.error ? <div className="error-panel" role="alert"><h3>Conflicts unavailable</h3><p>{conflicts.error}</p><button className="primary-button" type="button" onClick={retry}>Retry conflicts</button></div> : conflicts.data ? <><ConflictTable rows={conflicts.data.items} selectedId={selectedId} onSelect={selectConflict} /><div className="pagination"><button type="button" className="secondary-button" onClick={() => changePage()} disabled={!cursor}>First page</button><button type="button" className="secondary-button" onClick={() => changePage(conflicts.data?.nextCursor ?? undefined)} disabled={!conflicts.data.nextCursor}>Next page</button></div></> : null}
         </section>
 
-        {proposals.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading proposal queue…</p></section> : proposals.error ? <section className="error-panel" role="alert"><h2>Proposal queue unavailable</h2><p>{proposals.error}</p><button type="button" className="primary-button" onClick={retry}>Retry queue</button></section> : proposals.data ? <ProposalQueue proposals={proposals.data} status={proposalStatus} onStatus={changeProposalStatus} onConflict={selectConflict} /> : null}
+        {proposals.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading proposal queue…</p></section> : proposals.error ? <section className="error-panel" role="alert"><h2>Proposal queue unavailable</h2><p>{proposals.error}</p><button type="button" className="primary-button" onClick={retry}>Retry queue</button></section> : proposals.data ? <ProposalQueue proposals={proposals.data} status={proposalStatus} type={proposalType} source={proposalSource} onStatus={changeProposalStatus} onType={changeProposalType} onSource={changeProposalSource} onConflict={selectConflict} /> : null}
+        {groups.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading incident groups…</p></section> : groups.error ? <section className="error-panel" role="alert"><h2>Incident groups unavailable</h2><p>{groups.error}</p><button type="button" className="primary-button" onClick={retry}>Retry groups</button></section> : groups.data ? <IncidentGroups groups={groups.data} /> : null}
+        {tickets.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading extracted tickets…</p></section> : tickets.error ? <section className="error-panel" role="alert"><h2>Tickets unavailable</h2><p>{tickets.error}</p><button type="button" className="primary-button" onClick={retry}>Retry tickets</button></section> : tickets.data ? <TicketTable tickets={tickets.data} /> : null}
       </main>
       {selectedId ? detail.loading ? <div className="detail-panel loading-panel" role="dialog" aria-label="Loading conflict detail" aria-modal="true" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading lineage and audit evidence…</p><button type="button" className="secondary-button" onClick={closeDetail}>Close</button></div> : detail.error ? <div className="detail-panel error-panel" role="dialog" aria-modal="true" aria-labelledby="detail-error-heading"><h2 id="detail-error-heading">Conflict detail unavailable</h2><p>{detail.error}</p><button type="button" className="primary-button" onClick={retry}>Retry detail</button><button type="button" className="secondary-button" onClick={closeDetail}>Close</button></div> : detail.data ? <ConflictDetail detail={detail.data} onClose={closeDetail} onDecided={decided} /> : null : null}
-      <footer><p>Core mode is proposal-only. Synthetic fixtures · deterministic rules · no source writer.</p></footer>
+      <footer><p>Proposals stay pending by default. Auto-apply is a separate gated function. Synthetic fixtures · no source writer.</p></footer>
     </div>
   );
 }

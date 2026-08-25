@@ -18,6 +18,7 @@ interface PersistedRecord {
 interface PoolOptions {
   existing?: { status: string; summary: SyncResult };
   omitPersisted?: (record: PersistedRecord) => boolean;
+  omitIngestedAt?: boolean;
   failQuery?: (sql: string) => Error | undefined;
   oscillationHolds?: Array<{ id: string; conflict_key: string; oscillation_count: number }>;
 }
@@ -44,11 +45,11 @@ function makePool(options: PoolOptions = {}) {
       }
       return { rows: [], rowCount: rows.length };
     }
-    if (sql.startsWith('SELECT id, source_kind, entity_kind, source_id FROM source_records')) {
+    if (sql.includes('SELECT id, source_kind, entity_kind, source_id') && sql.includes('FROM source_records')) {
       const snapshotId = String(parameters?.[1]);
       const rows = persisted.filter((row) => row.snapshot_id === snapshotId).map(({ snapshot_id: persistedSnapshotId, ...row }) => {
         void persistedSnapshotId;
-        return row;
+        return options.omitIngestedAt ? row : { ...row, ingested_at: '2026-01-15T12:00:00.000Z' };
       });
       return { rows, rowCount: rows.length };
     }
@@ -189,13 +190,25 @@ describe('complete sync', () => {
   });
 
   it('persists material-field lineage for every mirrored record', async () => {
-    const { pool, statements } = makePool();
+    const { pool, statements, persisted } = makePool();
     await synchronize(pool, cleanAdapters(), config, request);
     const lineage = statements.filter(({ sql }) => sql.includes('INSERT INTO field_observations'));
-    const rows = lineage.flatMap(({ parameters }) => JSON.parse(String(parameters?.[1])) as Array<Record<string, unknown>>);
+    const rows = lineage.flatMap(({ parameters }) => JSON.parse(String(parameters?.[1])) as Array<{ source_record_id: number; normalization_version: string; source_observed_at: string }>);
     expect(rows).toHaveLength(37);
+    expect(new Set(rows.map(({ source_record_id }) => source_record_id)).size).toBe(persisted.length);
     expect(rows.every(({ normalization_version }) => normalization_version === 'normalization-v1')).toBe(true);
     expect(rows.every(({ source_observed_at }) => typeof source_observed_at === 'string')).toBe(true);
+  });
+
+  it('requires an ingest timestamp on every mirrored source record', async () => {
+    const { pool, statements } = makePool();
+    await synchronize(pool, cleanAdapters(), config, request);
+    expect(statements.some(({ sql }) => sql.startsWith('SELECT id, source_kind, entity_kind, source_id, ingested_at FROM source_records'))).toBe(true);
+  });
+
+  it('fails closed when a mirrored record is missing ingested_at', async () => {
+    const { pool } = makePool({ omitIngestedAt: true });
+    await expect(synchronize(pool, cleanAdapters(), config, request)).rejects.toThrow('ingested_at_missing');
   });
 
   it('persists a unified canonical entity and all five source links', async () => {
@@ -352,6 +365,11 @@ describe('partial and failed sources', () => {
     expect(summary.unchecked).toBeGreaterThan(0);
     expect(summary.reasons.some(({ reason }) => reason.includes('crm'))).toBe(true);
     expect(statements.some(({ sql }) => sql.includes('INSERT INTO conflicts'))).toBe(false);
+    const uncheckedInsert = statements.find(({ sql }) => sql.includes('INSERT INTO invariant_results') && sql.includes("'unchecked'"));
+    expect(uncheckedInsert).toBeDefined();
+    const uncheckedRows = JSON.parse(String(uncheckedInsert?.parameters?.[2])) as Array<{ entity_ref: string; reason: string }>;
+    expect(uncheckedRows.length).toBeGreaterThan(0);
+    expect(uncheckedRows.every(({ entity_ref, reason }) => entity_ref.startsWith('rule:') && reason.includes('source_unavailable'))).toBe(true);
   });
 
   it('persists structured failure code and detail after bounded retries', async () => {

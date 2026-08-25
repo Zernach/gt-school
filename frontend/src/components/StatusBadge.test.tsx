@@ -27,6 +27,7 @@ describe('StatusBadge', () => {
     ['pending', '◷', 'Pending'],
     ['approved', '✓', 'Approved'],
     ['applied', '✓', 'Applied'],
+    ['rolled_back', '↺', 'Rolled Back'],
     ['rejected', '×', 'Rejected'],
     ['held', '‖', 'Held'],
     ['oscillation_hold', '↺', 'Oscillation Hold'],

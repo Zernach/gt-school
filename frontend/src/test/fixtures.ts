@@ -71,6 +71,28 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
       },
       completed_at: FIXED_TIME
     },
+    stretch: {
+      incidentGroups: 14,
+      groupedConflicts: 3050,
+      extractedTickets: 3050
+    },
+    privacy: {
+      mode: 'redacted',
+      retentionDays: 30,
+      policyVersion: 'privacy-v1',
+      audit: 'append-only hashed metadata; raw PII is not stored in logs',
+      alerts: 'deleted after 30 days'
+    },
+    latestAlert: null,
+    reconciliation: {
+      ok: true,
+      checks: [
+        { name: 'ingestion_matches_active_snapshots', actual: 120_000, expected: 120_000, ok: true },
+        { name: 'conflicts_match_invariant_fail', actual: 3050, expected: 3050, ok: true },
+        { name: 'pending_proposals_within_active_conflicts', actual: 3049, expected: 3050, ok: true },
+        { name: 'spend_within_daily_cap', actual: 6100, expected: 1_000_000, ok: true }
+      ]
+    },
     ...overrides
   };
 }
@@ -205,6 +227,30 @@ export function conflictDetailFixture(overrides: Partial<ConflictDetail> = {}): 
         object_id: '22222222-2222-4222-8222-222222222222',
         metadata: { cost_microcents: 2 },
         created_at: FIXED_TIME
+      }
+    ],
+    incidentGroup: {
+      id: 'incgrp_paid',
+      label: 'paid_but_no_deal',
+      member_count: 12,
+      distance_bp: 80
+    },
+    tickets: [
+      {
+        id: 'ticket-1',
+        message_id: 'msg_paid',
+        conflict_id: 'conflict_paid_fixture',
+        student_ref: 'student:11111111-1111-4111-8111-111111111111',
+        family_ref: 'family:aaaaaaaaaaaa',
+        system: 'payments',
+        record_id: 'payment-record-1',
+        issue_type: 'paid_but_no_deal',
+        status: 'open',
+        owner: 'ops-c1',
+        requested_action: 'review:paid_but_no_deal',
+        resolution: null,
+        opened_at: FIXED_TIME,
+        resolved_at: null
       }
     ],
     ...overrides

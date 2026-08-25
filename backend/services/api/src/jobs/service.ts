@@ -4,7 +4,7 @@ import type { AppConfig } from '../config.js';
 import { stableUuid } from '../domain/stable.js';
 import type { DatabasePool } from '../persistence/database.js';
 
-export type JobType = 'sync' | 'reconcile';
+export type JobType = 'sync' | 'reconcile' | 'stretch';
 
 export interface CreateJobRequest {
   tenantId: string;

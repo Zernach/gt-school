@@ -1,16 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
-import { decideProposal } from '../api';
+import { decideProposal, rollbackProposal } from '../api';
 import { proposalFixture } from '../test/fixtures';
 import { ProposalDecision } from './ProposalDecision';
 
-vi.mock('../api', () => ({ decideProposal: vi.fn() }));
+vi.mock('../api', () => ({ decideProposal: vi.fn(), rollbackProposal: vi.fn() }));
 
 const mockedDecideProposal = vi.mocked(decideProposal);
+const mockedRollbackProposal = vi.mocked(rollbackProposal);
 
 beforeEach(() => {
   mockedDecideProposal.mockReset();
+  mockedRollbackProposal.mockReset();
 });
 
 describe('pending proposal decision', () => {
@@ -160,7 +162,7 @@ describe('pending proposal decision', () => {
 });
 
 describe('terminal proposal decision', () => {
-  it.each(['approved', 'rejected', 'held', 'superseded'] as const)('renders immutable status for %s', (status) => {
+  it.each(['approved', 'rejected', 'held', 'superseded', 'rolled_back'] as const)('renders immutable status for %s', (status) => {
     render(<ProposalDecision proposal={proposalFixture({ status })} onDecided={vi.fn()} />);
     expect(screen.getByRole('status')).toHaveTextContent(`Decision recorded: ${status}. This changed Keystone review state only.`);
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
@@ -170,10 +172,50 @@ describe('terminal proposal decision', () => {
   it('never invokes the API for terminal state render', () => {
     render(<ProposalDecision proposal={proposalFixture({ status: 'approved' })} onDecided={vi.fn()} />);
     expect(mockedDecideProposal).not.toHaveBeenCalled();
+    expect(mockedRollbackProposal).not.toHaveBeenCalled();
   });
 
   it('has no detectable accessibility violations', async () => {
     const { container } = render(<ProposalDecision proposal={proposalFixture({ status: 'held' })} onDecided={vi.fn()} />);
+    expect((await axe(container)).violations).toEqual([]);
+  });
+});
+
+describe('applied proposal rollback', () => {
+  it('exposes a confirmed rollback that does not mutate source systems', () => {
+    render(<ProposalDecision proposal={proposalFixture({ status: 'applied' })} onDecided={vi.fn()} />);
+    expect(screen.getByRole('group', { name: 'Roll back auto-apply' })).toBeInTheDocument();
+    expect(screen.getByText(/will not auto-apply again/u)).toBeInTheDocument();
+    expect(screen.getByText(/does not mutate a source system/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm rollback' })).toBeDisabled();
+  });
+
+  it('submits rollback after confirmation and returns the updated proposal', async () => {
+    const user = userEvent.setup();
+    const onDecided = vi.fn();
+    const applied = proposalFixture({ status: 'applied', version: 2 });
+    const rolled = proposalFixture({ status: 'rolled_back', version: 3 });
+    mockedRollbackProposal.mockResolvedValue(rolled);
+    render(<ProposalDecision proposal={applied} onDecided={onDecided} />);
+    await user.click(screen.getByRole('checkbox', { name: /I confirm this rollback/u }));
+    await user.click(screen.getByRole('button', { name: 'Confirm rollback' }));
+    expect(mockedRollbackProposal).toHaveBeenCalledWith(applied.id);
+    expect(onDecided).toHaveBeenCalledWith(expect.objectContaining({ status: 'rolled_back' }));
+  });
+
+  it('shows a rollback error without calling the callback', async () => {
+    const user = userEvent.setup();
+    mockedRollbackProposal.mockRejectedValue(new Error('Auto-apply record not found.'));
+    const onDecided = vi.fn();
+    render(<ProposalDecision proposal={proposalFixture({ status: 'applied' })} onDecided={onDecided} />);
+    await user.click(screen.getByRole('checkbox', { name: /I confirm this rollback/u }));
+    await user.click(screen.getByRole('button', { name: 'Confirm rollback' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Auto-apply record not found.');
+    expect(onDecided).not.toHaveBeenCalled();
+  });
+
+  it('has no detectable accessibility violations', async () => {
+    const { container } = render(<ProposalDecision proposal={proposalFixture({ status: 'applied' })} onDecided={vi.fn()} />);
     expect((await axe(container)).violations).toEqual([]);
   });
 });

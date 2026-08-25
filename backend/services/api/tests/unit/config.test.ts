@@ -24,6 +24,7 @@ describe('configuration defaults', () => {
       DEMO_REVIEWER_KEY: 'fixture-demo-reviewer-key-only',
       SYNC_TRIGGER_SECRET: 'fixture-sync-trigger-secret-only',
       RECONCILE_TRIGGER_SECRET: 'fixture-reconcile-trigger-secret-only',
+      STRETCH_TRIGGER_SECRET: 'fixture-stretch-trigger-secret-only',
       REQUEST_BODY_LIMIT_BYTES: 1_048_576,
       SOURCE_RECORD_LIMIT_BYTES: 262_144,
       SOURCE_TIMEOUT_MS: 5000,
@@ -38,7 +39,8 @@ describe('configuration defaults', () => {
       CANONICAL_SEED: 424242,
       LOG_PRIVACY_MODE: 'redacted',
       LOG_RETENTION_DAYS: 30,
-      OSCILLATION_HOLD_THRESHOLD: 3
+      OSCILLATION_HOLD_THRESHOLD: 3,
+      RECONCILE_SCHEDULE_MS: 86_400_000
     });
   });
 
@@ -74,7 +76,8 @@ describe('configuration coercion and overrides', () => {
     ['PER_RUN_SPEND_CAP_MICROCENTS', '800', 800],
     ['CANONICAL_SEED', '0', 0],
     ['LOG_RETENTION_DAYS', '90', 90],
-    ['OSCILLATION_HOLD_THRESHOLD', '4', 4]
+    ['OSCILLATION_HOLD_THRESHOLD', '4', 4],
+    ['RECONCILE_SCHEDULE_MS', '0', 0]
   ] as const)('coerces %s from an environment string', (key, raw, expected) => {
     const config = loadConfig({ ...baseEnvironment, [key]: raw });
     expect(config[key]).toBe(expected);
@@ -120,7 +123,8 @@ describe('configuration coercion and overrides', () => {
       DEMO_CLIENT_KEY: 'fixture-client-two',
       DEMO_REVIEWER_KEY: 'fixture-reviewer-two',
       SYNC_TRIGGER_SECRET: 'fixture-sync-secret-two',
-      RECONCILE_TRIGGER_SECRET: 'fixture-reconcile-two'
+      RECONCILE_TRIGGER_SECRET: 'fixture-reconcile-two',
+      STRETCH_TRIGGER_SECRET: 'fixture-stretch-secret-two'
     });
     expect(config.RUNTIME_DATABASE_USER).toBe('runtime_reader_2');
     expect(config.DEMO_TENANT_ID).toBe('11111111-1111-4111-8111-111111111111');
@@ -168,6 +172,7 @@ describe('configuration rejection', () => {
     ['CANONICAL_SEED', '1.5'],
     ['LOG_RETENTION_DAYS', '0'],
     ['OSCILLATION_HOLD_THRESHOLD', '0'],
+    ['RECONCILE_SCHEDULE_MS', '-1'],
     ['LOG_PRIVACY_MODE', 'unsafe'],
     ['PROVIDER_MODE', 'magic']
   ])('rejects invalid %s=%s', (key, value) => {
@@ -190,7 +195,8 @@ describe('configuration rejection', () => {
     'DEMO_CLIENT_KEY',
     'DEMO_REVIEWER_KEY',
     'SYNC_TRIGGER_SECRET',
-    'RECONCILE_TRIGGER_SECRET'
+    'RECONCILE_TRIGGER_SECRET',
+    'STRETCH_TRIGGER_SECRET'
   ])('rejects a short %s', (key) => {
     expect(() => loadConfig({ ...baseEnvironment, [key]: 'too-short' })).toThrow(`configuration_invalid: ${key}`);
   });

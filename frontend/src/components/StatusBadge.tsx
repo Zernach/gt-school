@@ -4,6 +4,7 @@ const SYMBOLS: Record<string, string> = {
   pending: '◷',
   approved: '✓',
   applied: '✓',
+  rolled_back: '↺',
   rejected: '×',
   held: '‖',
   oscillation_hold: '↺',

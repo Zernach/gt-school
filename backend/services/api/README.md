@@ -35,9 +35,9 @@ Credentials and bodies are redacted from structured logs. Client and trigger sec
 {"decision":"approve|reject|hold","reason":"at least 3 characters","version":1}
 ```
 
-Only `pending` may transition. The row is locked; a stale version returns 409; decision, actor, reason, and audit event commit in one transaction. Approval is review state, not source application.
+Only `pending` may transition via decision. The row is locked; a stale version returns 409; decision, actor, reason, and audit event commit in one transaction. Approval is review state, not source application. Auto-applied proposals use `POST /api/v1/proposals/:id/rollback` (reviewer scope) and become `rolled_back` so they cannot be auto-applied again.
 
-Both job endpoints accept:
+Job endpoints (`/jobs/sync`, `/jobs/reconcile`, `/jobs/stretch`) accept:
 
 ```json
 {"idempotencyKey":"at-least-8-characters","generation":3}
@@ -57,7 +57,11 @@ Accepted records and material-field observations are immutable. Complete payload
 
 ## Reconciler contract
 
-The worker takes one tenant advisory lock, loads active conflicts in stable order, deduplicates stable action fingerprints, reserves worst-case cost, validates provider schema/fingerprint, settles cost, computes `confidence-v1`, and inserts explicit `pending` proposals plus audits. Provider timeout or invalid output charges the reserved worst case and records `proposal_generation_failed` without weakening later gates.
+The worker takes one tenant advisory lock, loads active conflicts in stable order, deduplicates stable action fingerprints, reserves worst-case cost, validates provider schema/fingerprint, settles cost, computes `confidence-v2`, and inserts explicit `pending` proposals plus audits. Provider timeout or invalid output charges the reserved worst case and records `proposal_generation_failed` without weakening later gates.
+
+Stretch is a separate idempotent job (`POST /api/v1/jobs/stretch`) that (1) rebuilds 64-d cosine embeddings and incident groups, (2) extracts tickets into joinable SQL fields, (3) runs `autoApplyEligibleProposals` only for ≥0.95 allowlisted non-sensitive complete-evidence cases with a stored rollback snapshot, and (4) redacts logs and deletes `alert_events` older than `LOG_RETENTION_DAYS`. Auto-apply never writes source mirrors. Reviewers may `POST /api/v1/proposals/:id/rollback`.
+
+`GET /api/v1/overview` includes stretch counts and the privacy policy (`privacy-v1`, retention days, redacted-log mode). `GET /api/v1/incident-groups` nearest-neighbor uses pgvector `<=>`. `GET /api/v1/tickets` returns student, family, system, record id, issue type, status, owner, requested action, resolution, and dates.
 
 Daily and run caps use integer microcents. Both ledgers are locked before reservation. Cap denial writes `spend_cap_reached` audit and critical alert inside the same transaction; the loop halts without calling the provider.
 

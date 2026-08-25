@@ -38,4 +38,14 @@ Feature: Cross-source reconciliation remains truthful and guarded
     Then the modal shows invariant evidence, active field lineage, proposal policy, confidence, cost, and audit history
     And focus remains within the modal until Escape or Close
     And closing returns focus to the invoking conflict
+
+  Scenario: Stretch grouping, tickets, auto-apply, and privacy stay source-safe
+    Given 3050 active conflicts with pending proposals
+    When the stretch job completes
+    Then related failures are clustered into pgvector incident groups
+    And each conflict yields a ticket with student, family, system, record, issue, owner, action, and dates
+    And auto-apply mutates only eligible Keystone proposals at ≥0.95 with a rollback snapshot
+    And sensitive fields are never auto-applied
+    And stored logs are redacted and alerts follow the documented retention policy
+    And the source mirror hash is unchanged
     And approval records Keystone review state without mutating a source system

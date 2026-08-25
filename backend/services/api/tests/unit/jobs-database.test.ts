@@ -2,6 +2,7 @@ import type { RedisClientType } from 'redis';
 import { loadConfig } from '../../src/config.js';
 import { stableUuid } from '../../src/domain/stable.js';
 import { createDurableJob, publishJob, publishReadyJobs } from '../../src/jobs/service.js';
+import { dueScheduledReconcile, enqueueScheduledReconcile, scheduledReconcileIdempotencyKey } from '../../src/jobs/schedule.js';
 import { databaseReady, inTransaction, type DatabasePool } from '../../src/persistence/database.js';
 
 const config = loadConfig({ NODE_ENV: 'test' });
@@ -124,5 +125,34 @@ describe('database transaction boundary', () => {
   it('uses a generic database error for non-Error rejection values', async () => {
     await expect(databaseReady(poolWithQuery(vi.fn().mockRejectedValue('offline'))))
       .resolves.toMatchObject({ ready: false, error: 'database_unavailable' });
+  });
+});
+
+describe('unattended reconcile schedule', () => {
+  it('uses a UTC-day idempotency key', () => {
+    expect(scheduledReconcileIdempotencyKey(new Date('2026-08-24T23:59:59.000Z'))).toBe('scheduled:reconcile:2026-08-24');
+  });
+
+  it('is due only after the configured interval and never when disabled', () => {
+    expect(dueScheduledReconcile(0, 1, 0)).toBe(false);
+    expect(dueScheduledReconcile(1000, 1999, 1000)).toBe(false);
+    expect(dueScheduledReconcile(1000, 2000, 1000)).toBe(true);
+  });
+
+  it('does not create a job when the schedule is disabled', async () => {
+    const query = vi.fn();
+    await expect(enqueueScheduledReconcile(poolWithQuery(query), { xAdd: vi.fn() } as unknown as RedisClientType, { ...config, RECONCILE_SCHEDULE_MS: 0 }))
+      .resolves.toBeUndefined();
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('creates a durable scheduled reconcile job before publish', async () => {
+    const id = stableUuid(`job:${config.DEMO_TENANT_ID}:reconcile:scheduled:reconcile:2026-08-24`);
+    const query = vi.fn().mockResolvedValueOnce({ rows: [{ id, status: 'queued' }], rowCount: 1 }).mockResolvedValue({ rows: [], rowCount: 1 });
+    const xAdd = vi.fn().mockResolvedValue('9-1');
+    await expect(enqueueScheduledReconcile(poolWithQuery(query), { xAdd } as unknown as RedisClientType, config, new Date('2026-08-24T12:00:00.000Z')))
+      .resolves.toEqual({ id, status: 'queued', duplicate: false });
+    expect(query.mock.calls[0]?.[1]?.[3]).toBe('scheduled:reconcile:2026-08-24');
+    expect(xAdd).toHaveBeenCalledWith(config.QUEUE_STREAM, '*', { job_id: id });
   });
 });

@@ -8,7 +8,9 @@ import {
   getOverview,
   getRun,
   listConflicts,
+  listIncidentGroups,
   listProposals,
+  listTickets,
   type TenantContext
 } from '../../src/persistence/queries.js';
 
@@ -36,14 +38,17 @@ describe('client authentication', () => {
 });
 
 describe('overview query', () => {
-  it('runs six tenant-scoped queries and preserves dashboard accounting', async () => {
+  it('runs tenant-scoped queries and preserves dashboard accounting', async () => {
     const responses = [
       { rows: [{ source_kind: 'crm', accepted_count: 55_000 }] },
       { rows: [{ active: '3050', resolved: '0', oscillation_hold: '0' }] },
       { rows: [{ status: 'pending', count: 3050 }] },
       { rows: [{ status: 'complete', summary: { fail: 3050 } }] },
       { rows: [{ cap_microcents: '100', reserved_microcents: '50', actual_microcents: '50', released_microcents: '0' }] },
-      { rows: [{ id: 'sync-id', status: 'complete' }] }
+      { rows: [{ id: 'sync-id', status: 'complete', summary: { acceptedRecords: 55_000 } }] },
+      { rows: [{ groups: 12, members: 40 }] },
+      { rows: [{ tickets: 40 }] },
+      { rows: [{ alert_type: 'spend_cap_reached', severity: 'critical', message: 'daily cap reached', created_at: '2026-01-15T12:00:00.000Z' }] }
     ];
     const query = vi.fn();
     for (const response of responses) query.mockResolvedValueOnce({ ...response, rowCount: response.rows.length });
@@ -53,10 +58,52 @@ describe('overview query', () => {
       proposals: responses[2]!.rows,
       invariant: responses[3]!.rows[0],
       spend: responses[4]!.rows[0],
-      latestRun: responses[5]!.rows[0]
+      latestRun: responses[5]!.rows[0],
+      stretch: { incidentGroups: 12, groupedConflicts: 40, extractedTickets: 40 },
+      latestAlert: responses[8]!.rows[0],
+      reconciliation: {
+        ok: true,
+        checks: [
+          { name: 'ingestion_matches_active_snapshots', actual: 55_000, expected: 55_000, ok: true },
+          { name: 'conflicts_match_invariant_fail', actual: 3050, expected: 3050, ok: true },
+          { name: 'pending_proposals_within_active_conflicts', actual: 3050, expected: 3050, ok: true },
+          { name: 'spend_within_daily_cap', actual: 50, expected: 100, ok: true }
+        ]
+      },
+      evidenceWindow: { from: null }
     });
-    expect(query).toHaveBeenCalledTimes(6);
+    expect(query).toHaveBeenCalledTimes(9);
     expect(query.mock.calls.every(([, parameters]) => parameters[0] === tenantId)).toBe(true);
+  });
+
+  it('scopes conflict, proposal, and invariant-fail counts to the selected evidence window', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+    await getOverview(pool(query), tenantId, { from: '2026-01-15T00:00:00.000Z' });
+    expect(query.mock.calls[1]?.[0]).toContain('last_seen_at >= $2::timestamptz');
+    expect(query.mock.calls[1]?.[1]).toEqual([tenantId, '2026-01-15T00:00:00.000Z']);
+    expect(query.mock.calls[2]?.[0]).toContain('conflicts.last_seen_at >= $2::timestamptz');
+    expect(query.mock.calls[2]?.[1]).toEqual([tenantId, '2026-01-15T00:00:00.000Z']);
+    expect(query.mock.calls[3]?.[0]).toContain('windowed_fail');
+    expect(query.mock.calls[3]?.[1]).toEqual([tenantId, '2026-01-15T00:00:00.000Z']);
+  });
+
+  it('reconciles windowed dashboard figures against windowed invariant-fail logs', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+    query.mockResolvedValueOnce({ rows: [{ accepted_count: 120_000 }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ active: '12', resolved: '0', oscillation_hold: '0' }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ status: 'pending', count: 12 }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ summary: { fail: 3050 }, windowed_fail: 12 }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ cap_microcents: '100', reserved_microcents: '10', actual_microcents: '10', released_microcents: '0' }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ summary: { acceptedRecords: 120_000 } }], rowCount: 1 });
+    const overview = await getOverview(pool(query), tenantId, { from: '2026-01-15T00:00:00.000Z' });
+    expect(overview.reconciliation).toMatchObject({
+      ok: true,
+      checks: expect.arrayContaining([
+        { name: 'conflicts_match_invariant_fail', actual: 12, expected: 12, ok: true },
+        { name: 'pending_proposals_within_active_conflicts', actual: 12, expected: 12, ok: true }
+      ])
+    });
+    expect(overview.evidenceWindow).toEqual({ from: '2026-01-15T00:00:00.000Z' });
   });
 
   it('returns explicit empty defaults before the first sync', async () => {
@@ -66,7 +113,11 @@ describe('overview query', () => {
       proposals: [],
       invariant: null,
       spend: { cap_microcents: '0', reserved_microcents: '0', actual_microcents: '0', released_microcents: '0' },
-      latestRun: null
+      latestRun: null,
+      stretch: { incidentGroups: 0, groupedConflicts: 0, extractedTickets: 0 },
+      latestAlert: null,
+      reconciliation: { ok: true },
+      evidenceWindow: { from: null }
     });
   });
 });
@@ -127,9 +178,16 @@ describe('conflict and entity detail', () => {
       .mockResolvedValueOnce({ rows: [conflict], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: 'proposal-1' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ source_kind: 'payments', field_path: 'payer_email' }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [{ event_type: 'proposal_created' }], rowCount: 1 });
+      .mockResolvedValueOnce({ rows: [{ event_type: 'proposal_created' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'incgrp_one', label: 'paid_but_no_deal', member_count: 4, distance_bp: 120 }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'ticket-1', issue_type: 'paid_but_no_deal' }], rowCount: 1 });
     const result = await getConflictDetail(pool(query), tenantId, conflict.id);
-    expect(result).toMatchObject({ id: conflict.id, proposal: { id: 'proposal-1' } });
+    expect(result).toMatchObject({
+      id: conflict.id,
+      proposal: { id: 'proposal-1' },
+      incidentGroup: { id: 'incgrp_one' },
+      tickets: [{ id: 'ticket-1' }]
+    });
     expect(query.mock.calls[2]?.[0]).toContain('JOIN active_snapshots active');
     expect(query.mock.calls[2]?.[1]).toEqual([tenantId, ['student-1', 'payment-1'], ['entity:student-1']]);
     expect(query.mock.calls[3]?.[1]).toEqual([tenantId, 'conflict-1', 'proposal-1']);
@@ -143,9 +201,13 @@ describe('conflict and entity detail', () => {
 
   it('returns only active-snapshot links for the unified entity', async () => {
     const query = vi.fn()
-      .mockResolvedValueOnce({ rows: [{ id: 'entity:student-1', summary: { paid: true } }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'entity:student-1', summary: { paid: true, raw: { secret: true } } }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ source_kind: 'payments', source_id: 'payment-1' }], rowCount: 1 });
-    await expect(getEntity(pool(query), tenantId, 'entity:student-1')).resolves.toMatchObject({ id: 'entity:student-1', links: [{ source_kind: 'payments' }] });
+    await expect(getEntity(pool(query), tenantId, 'entity:student-1')).resolves.toEqual({
+      id: 'entity:student-1',
+      summary: { paid: true },
+      links: [{ source_kind: 'payments', source_id: 'payment-1' }]
+    });
     expect(query.mock.calls[1]?.[0]).toContain('JOIN active_snapshots active');
     expect(query.mock.calls[1]?.[1]).toEqual([tenantId, 'entity:student-1']);
   });
@@ -154,8 +216,9 @@ describe('conflict and entity detail', () => {
 describe('proposal queue and decisions', () => {
   it('binds optional proposal filters and a bounded limit', async () => {
     const query = vi.fn().mockResolvedValue({ rows: [{ id: 'proposal-1' }], rowCount: 1 });
-    await expect(listProposals(pool(query), tenantId, { status: 'pending', minimumConfidenceBp: 9500, limit: 50 })).resolves.toEqual([{ id: 'proposal-1' }]);
-    expect(query.mock.calls[0]?.[1]).toEqual([tenantId, 'pending', 9500, 50]);
+    await expect(listProposals(pool(query), tenantId, { status: 'pending', minimumConfidenceBp: 9500, type: 'paid_but_no_deal', source: 'payments', limit: 50 })).resolves.toEqual([{ id: 'proposal-1' }]);
+    expect(query.mock.calls[0]?.[0]).toContain('$5 = ANY(conflicts.sources_involved)');
+    expect(query.mock.calls[0]?.[1]).toEqual([tenantId, 'pending', 9500, 'paid_but_no_deal', 'payments', 50]);
   });
 
   it('rejects viewer decisions before opening a transaction', async () => {
@@ -240,5 +303,21 @@ describe('run lookup', () => {
       invariants: [{ status: 'partial', summary: { unchecked: 8 } }]
     });
     expect(query.mock.calls.every(([, parameters]) => parameters[0] === tenantId)).toBe(true);
+  });
+});
+
+describe('stretch listings', () => {
+  it('orders nearest incident groups with the pgvector cosine operator', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: 'incgrp_one', nearest_group_id: 'incgrp_two' }], rowCount: 1 });
+    await expect(listIncidentGroups(pool(query), tenantId, 50)).resolves.toEqual([{ id: 'incgrp_one', nearest_group_id: 'incgrp_two' }]);
+    expect(query.mock.calls[0]?.[0]).toContain('<=>');
+    expect(query.mock.calls[0]?.[1]).toEqual([tenantId, 50]);
+  });
+
+  it('binds ticket filters instead of interpolating them', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
+    await listTickets(pool(query), tenantId, { issueType: "paid_but_no_deal' OR true", status: 'open', limit: 25 });
+    expect(query.mock.calls[0]?.[0]).not.toContain("OR true");
+    expect(query.mock.calls[0]?.[1]).toEqual([tenantId, "paid_but_no_deal' OR true", 'open', 25]);
   });
 });

@@ -5,7 +5,7 @@ import { stableKey } from './stable.js';
 
 export const RULE_SET_VERSION = 'invariants-v1';
 
-const RULE_BY_TYPE: Record<ConflictType, string> = {
+export const RULE_BY_TYPE: Record<ConflictType, string> = {
   paid_but_no_deal: 'C1',
   payment_with_no_person: 'C2',
   duplicate_by_email: 'C3',

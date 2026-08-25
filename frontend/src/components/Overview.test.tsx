@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { axe } from 'vitest-axe';
-import { overviewFixture } from '../test/fixtures';
+import { overviewFixture, FIXED_TIME } from '../test/fixtures';
 import { Overview } from './Overview';
 
 describe('trust overview', () => {
@@ -8,6 +8,11 @@ describe('trust overview', () => {
     render(<Overview overview={overviewFixture()} />);
     expect(screen.getByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
     expect(screen.getByText('Current evidence window')).toBeInTheDocument();
+  });
+
+  it('shows the selected evidence-window start without relying on color', () => {
+    render(<Overview overview={overviewFixture({ evidenceWindow: { from: FIXED_TIME } })} />);
+    expect(screen.getByText(`From ${new Date(FIXED_TIME).toLocaleString()}`)).toBeInTheDocument();
   });
 
   it('renders active conflicts with thousands separators', () => {
@@ -103,6 +108,51 @@ describe('trust overview', () => {
   it('renders a defined empty source state', () => {
     render(<Overview overview={overviewFixture({ sources: [] })} />);
     expect(screen.getByText('No complete source snapshot is active yet.')).toBeInTheDocument();
+  });
+
+  it('shows auto-applied and incident-group stretch metrics', () => {
+    render(<Overview overview={overviewFixture({ proposals: [{ status: 'applied', count: 18 }, { status: 'pending', count: 3032 }] })} />);
+    expect(within(screen.getByText('Auto-applied').closest('article')!).getByText('18')).toBeInTheDocument();
+    expect(within(screen.getByText('Incident groups').closest('article')!).getByText('14')).toBeInTheDocument();
+    expect(screen.getByText('3,050 extracted tickets')).toBeInTheDocument();
+  });
+
+  it('documents log redaction and retention without color-only state', () => {
+    render(<Overview overview={overviewFixture()} />);
+    expect(screen.getByText(/Logs: redacted · retain 30 days/u)).toBeInTheDocument();
+    expect(screen.getByText(/append-only hashed metadata/u)).toBeInTheDocument();
+  });
+
+  it('shows that dashboard figures match the underlying logs', () => {
+    render(<Overview overview={overviewFixture()} />);
+    expect(screen.getByText('Figures match ingestion, invariant, and proposal logs')).toBeInTheDocument();
+  });
+
+  it('surfaces a mismatched evidence window as more than color', () => {
+    render(<Overview overview={overviewFixture({
+      reconciliation: {
+        ok: false,
+        checks: [
+          { name: 'conflicts_match_invariant_fail', actual: 12, expected: 3050, ok: false },
+          { name: 'spend_within_daily_cap', actual: 1, expected: 1, ok: true }
+        ]
+      }
+    })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Dashboard figures do not match logs');
+    expect(screen.getByText(/conflicts match invariant fail: 12 vs 3050/u)).toBeInTheDocument();
+  });
+
+  it('shows a spend-cap alert in visible text', () => {
+    render(<Overview overview={overviewFixture({
+      latestAlert: {
+        alert_type: 'spend_cap_reached',
+        severity: 'critical',
+        message: 'daily spend cap reached',
+        created_at: FIXED_TIME
+      }
+    })} />);
+    expect(screen.getByText('Critical alert')).toBeInTheDocument();
+    expect(screen.getByText('daily spend cap reached')).toBeInTheDocument();
   });
 
   it('has no detectable accessibility violations in complete state', async () => {

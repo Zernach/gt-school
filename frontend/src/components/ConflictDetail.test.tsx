@@ -69,6 +69,10 @@ describe('conflict detail', () => {
     expect(within(section).getByText('crm_deal_id')).toBeInTheDocument();
     expect(within(section).getByText('actions-v1')).toBeInTheDocument();
     expect(within(section).getByText('2 micro-cents')).toBeInTheDocument();
+    expect(within(section).getByRole('heading', { name: 'Proposal evidence' })).toBeInTheDocument();
+    expect(within(section).getByText(/"source_systems_unchanged": true/u)).toBeInTheDocument();
+    expect(within(section).getByRole('heading', { name: 'Confidence signals' })).toBeInTheDocument();
+    expect(within(section).getByText(/"hardIdAgreement": true/u)).toBeInTheDocument();
   });
 
   it('shows a normative sensitive-field hard hold', () => {
@@ -131,8 +135,10 @@ describe('conflict detail', () => {
     expect(within(section).getAllByRole('listitem')).toHaveLength(2);
     expect(within(section).getByText('Sync Completed')).toBeInTheDocument();
     expect(within(section).getByText('Proposal Created')).toBeInTheDocument();
-    expect(within(section).getByText('system:sync')).toBeInTheDocument();
-    expect(within(section).getByText('system:reconciler')).toBeInTheDocument();
+    expect(within(section).getByText(/system:sync/u)).toBeInTheDocument();
+    expect(within(section).getByText(/system:reconciler/u)).toBeInTheDocument();
+    expect(within(section).getByText(/Accepted 120000/u)).toBeInTheDocument();
+    expect(within(section).getByText(/Cost Microcents 2/u)).toBeInTheDocument();
   });
 
   it('marks failed audit events with failed text and symbol', () => {
@@ -162,6 +168,14 @@ describe('conflict detail', () => {
   it('renders a defined empty audit state', () => {
     render(<ConflictDetail detail={conflictDetailFixture({ audit: [] })} onClose={vi.fn()} onDecided={vi.fn()} />);
     expect(screen.getByText('No related audit events yet.')).toBeInTheDocument();
+  });
+
+  it('shows the incident group and linked tickets for a clustered failure', () => {
+    render(<ConflictDetail detail={conflictDetailFixture()} onClose={vi.fn()} onDecided={vi.fn()} />);
+    expect(screen.getByRole('heading', { name: 'Incident group' })).toBeInTheDocument();
+    expect(screen.getByText(/12 related failures/u)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Linked tickets' })).toBeInTheDocument();
+    expect(screen.getByText(/ops-c1/u)).toBeInTheDocument();
   });
 
   it('passes successful decisions back to its owner', async () => {

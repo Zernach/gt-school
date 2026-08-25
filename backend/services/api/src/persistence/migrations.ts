@@ -50,9 +50,11 @@ export async function provisionRuntimeRole(pool: DatabasePool, role: string, pas
   await pool.query(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${identifier}`);
   await pool.query(`GRANT INSERT, UPDATE ON sync_runs, source_runs, source_snapshots, active_snapshots,
     canonical_entities, households, invariant_runs, conflicts, proposals, spend_buckets, spend_runs,
-    spend_reservations, jobs TO ${identifier}`);
+    spend_reservations, jobs, proposal_applications, grouping_runs, incident_embeddings, incident_groups,
+    incident_group_members, extracted_tickets, log_retention_runs TO ${identifier}`);
   await pool.query(`GRANT INSERT ON source_records, field_observations, entity_links, household_memberships,
     invariant_results, proposal_decisions, fixture_rejections, audit_events, alert_events TO ${identifier}`);
+  await pool.query(`GRANT DELETE ON incident_embeddings, incident_groups, incident_group_members, alert_events TO ${identifier}`);
   await pool.query(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${identifier}`);
   await pool.query(`GRANT SELECT ON ALL TABLES IN SCHEMA source_app TO ${identifier}`);
   await pool.query(`REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA source_app FROM ${identifier}`);

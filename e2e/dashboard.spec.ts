@@ -34,6 +34,11 @@ test.describe('production dashboard', () => {
     expect(response.headers()['referrer-policy']).toBe('no-referrer');
     expect(response.headers()['content-security-policy']).toContain("default-src 'self'");
 
+    const favicon = await page.request.get('/favicon.ico');
+    expect(favicon.status()).toBe(200);
+    expect(favicon.headers()['content-type']).toMatch(/icon|png/i);
+    expect(Buffer.from(await favicon.body()).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
+
     await loadDashboard(page);
     await expect(page.getByText('Active conflicts').locator('..').getByText('3,050')).toBeVisible();
     await expect(page.getByText('source writes: zero')).toBeVisible();

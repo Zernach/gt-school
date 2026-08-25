@@ -43,16 +43,16 @@ describe('conflict filters', () => {
     expect(within(source).getAllByRole('option').map((option) => option.textContent)).toEqual(['All sources', 'CRM', 'App DB', 'Payments']);
   });
 
-  it('offers active, resolved, and oscillation-hold conflict states', () => {
+  it('offers active, resolved, unchecked, and oscillation-hold conflict states', () => {
     render(<ConflictFiltersForm filters={EMPTY_FILTERS} onChange={vi.fn()} disabled={false} />);
     const status = screen.getByRole('combobox', { name: 'Conflict status' });
-    expect(within(status).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'active', 'resolved', 'oscillation_hold']);
+    expect(within(status).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'active', 'resolved', 'unchecked', 'oscillation_hold']);
   });
 
   it('offers every human review state', () => {
     render(<ConflictFiltersForm filters={EMPTY_FILTERS} onChange={vi.fn()} disabled={false} />);
     const status = screen.getByRole('combobox', { name: 'Proposal status' });
-    expect(within(status).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'pending', 'approved', 'rejected', 'held']);
+    expect(within(status).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['', 'pending', 'approved', 'rejected', 'held', 'applied', 'rolled_back']);
   });
 
   it('offers documented confidence thresholds', () => {
@@ -220,6 +220,17 @@ describe('conflict table', () => {
     render(<ConflictTable rows={[conflictFixture({ proposal_id: null, proposal_status: null, confidence_bp: null })]} selectedId={null} onSelect={vi.fn()} />);
     expect(screen.getAllByText('Unchecked')).toHaveLength(1);
     expect(screen.getByText('No proposal')).toBeInTheDocument();
+  });
+
+  it('stacks conflict and confidence cell content so every column stays left-aligned', () => {
+    const { container } = render(<ConflictTable rows={[conflictFixture({ sensitive_hold: true })]} selectedId={null} onSelect={vi.fn()} />);
+    const identity = container.querySelector('th[scope="row"] .cell-stack');
+    const confidence = screen.getByText('75% evidence').closest('.cell-stack');
+    expect(identity).toBeTruthy();
+    expect(confidence).toBeTruthy();
+    expect(identity).toContainElement(screen.getByRole('button', { name: 'Paid But No Deal' }));
+    expect(identity).toContainElement(screen.getByText('Active'));
+    expect(confidence).toContainElement(screen.getByText('Sensitive hold'));
   });
 
   it('shows a textual sensitive hold in addition to status color', () => {

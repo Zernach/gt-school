@@ -59,7 +59,8 @@ describe('privacy-safe metadata logging', () => {
     'token',
     'api_token',
     'password',
-    'client_key'
+    'client_key',
+    'last_error'
   ])('redacts sensitive key %s', (key) => {
     const result = redactMetadata({ [key]: 'sensitive-value' }) as Record<string, string>;
     expect(result[key]).toMatch(/^\[redacted:[0-9a-f]{12}\]$/u);
@@ -84,6 +85,18 @@ describe('privacy-safe metadata logging', () => {
 
   it('preserves null and undefined without inventing hashes', () => {
     expect(redactMetadata({ email: null, secret: undefined })).toEqual({ email: null, secret: undefined });
+  });
+
+  it('redacts email-shaped values even on ordinary keys', () => {
+    expect(redactMetadata({ note: 'contact jordan@example.test immediately' })).toEqual({
+      note: expect.stringMatching(/contact \[redacted:[0-9a-f]{12}\] immediately/u)
+    });
+  });
+
+  it('redacts reviewer reasons in stored logs', () => {
+    const result = redactMetadata({ reason: 'Jordan Rivera legal name is wrong' }) as { reason: string };
+    expect(result.reason).toMatch(/^\[redacted:[0-9a-f]{12}\]$/u);
+    expect(result.reason).not.toContain('Jordan');
   });
 
   it('allows explicit full fixture-only mode', () => {

@@ -88,6 +88,11 @@ try {
   assert.equal(spend.reserved_microcents, cap.toString());
   assert.equal(spend.actual_microcents, cap.toString());
   assert.equal(spend.released_microcents, '0');
+  const latestAlert = overview.latestAlert as { alert_type: string; severity: string } | null;
+  assert.equal(latestAlert?.alert_type, 'spend_cap_reached');
+  assert.equal(latestAlert?.severity, 'critical');
+  const spendCheck = (overview.reconciliation as { checks: Array<{ name: string; ok: boolean }> }).checks.find(({ name }) => name === 'spend_within_daily_cap');
+  assert.equal(spendCheck?.ok, true);
 
   const duplicateRetry = await reserveProviderCost(pool, context, spendRunId, results[0]!.fingerprint, estimate);
   assert.deepEqual(duplicateRetry.reason, 'duplicate');

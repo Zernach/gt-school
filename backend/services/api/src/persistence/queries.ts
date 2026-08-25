@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { publicEntitySummary, reconcileDashboardFigures } from '../domain/dashboard-reconciliation.js';
 import { transitionProposal, type ProposalDecision } from '../domain/proposal-state.js';
+import { redactMetadata } from '../domain/redaction.js';
 import { sha256, stableStringify } from '../domain/stable.js';
 import type { DatabasePool } from './database.js';
 import { inTransaction } from './database.js';
@@ -20,28 +22,66 @@ export async function authenticateClient(pool: DatabasePool, key: string): Promi
   return row ? { tenantId: row.id, tenantSlug: row.slug, role: row.role } : undefined;
 }
 
-export async function getOverview(pool: DatabasePool, tenantId: string): Promise<Record<string, unknown>> {
-  const [source, conflicts, proposals, invariant, spend, sync] = await Promise.all([
+export async function getOverview(pool: DatabasePool, tenantId: string, options: { from?: string } = {}): Promise<Record<string, unknown>> {
+  const from = options.from ?? null;
+  const [source, conflicts, proposals, invariant, spend, sync, groups, tickets, alerts] = await Promise.all([
     pool.query(`SELECT active.source_kind, active.activated_at, snapshots.generation, snapshots.accepted_count, snapshots.rejected_count, snapshots.status
       FROM active_snapshots active JOIN source_snapshots snapshots ON snapshots.id = active.snapshot_id WHERE active.tenant_id = $1 ORDER BY active.source_kind`, [tenantId]),
     pool.query<{ active: string; resolved: string; oscillation_hold: string }>(`SELECT
       count(*) FILTER (WHERE status = 'active') AS active,
       count(*) FILTER (WHERE status = 'resolved') AS resolved,
       count(*) FILTER (WHERE status = 'oscillation_hold') AS oscillation_hold
-      FROM conflicts WHERE tenant_id = $1`, [tenantId]),
-    pool.query(`SELECT status, count(*)::integer AS count FROM proposals WHERE tenant_id = $1 GROUP BY status ORDER BY status`, [tenantId]),
-    pool.query(`SELECT status, summary, source_availability, completed_at FROM invariant_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1`, [tenantId]),
+      FROM conflicts WHERE tenant_id = $1 AND ($2::timestamptz IS NULL OR last_seen_at >= $2::timestamptz)`, [tenantId, from]),
+    pool.query(`SELECT proposals.status, count(*)::integer AS count
+      FROM proposals JOIN conflicts ON conflicts.tenant_id = proposals.tenant_id AND conflicts.id = proposals.conflict_id
+      WHERE proposals.tenant_id = $1 AND ($2::timestamptz IS NULL OR conflicts.last_seen_at >= $2::timestamptz)
+      GROUP BY proposals.status ORDER BY proposals.status`, [tenantId, from]),
+    pool.query(`SELECT status, summary, source_availability, completed_at,
+      (
+        SELECT count(*)::integer FROM invariant_results results
+        LEFT JOIN conflicts ON conflicts.tenant_id = results.tenant_id AND conflicts.conflict_key = results.conflict_key
+        WHERE results.invariant_run_id = invariant_runs.id AND results.verdict = 'fail'
+          AND ($2::timestamptz IS NULL OR conflicts.last_seen_at >= $2::timestamptz)
+      ) AS windowed_fail
+      FROM invariant_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1`, [tenantId, from]),
     pool.query(`SELECT cap_microcents, reserved_microcents, actual_microcents, released_microcents FROM spend_buckets
       WHERE tenant_id = $1 AND spend_day = (now() AT TIME ZONE 'UTC')::date`, [tenantId]),
-    pool.query(`SELECT id, status, requested_generation, source_availability, summary, completed_at FROM sync_runs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`, [tenantId])
+    pool.query(`SELECT id, status, requested_generation, source_availability, summary, completed_at FROM sync_runs WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1`, [tenantId]),
+    pool.query<{ groups: string; members: string }>(`SELECT count(*)::integer AS groups, coalesce(sum(member_count), 0)::integer AS members FROM incident_groups WHERE tenant_id = $1`, [tenantId]),
+    pool.query<{ tickets: string }>(`SELECT count(*)::integer AS tickets FROM extracted_tickets WHERE tenant_id = $1`, [tenantId]),
+    pool.query(`SELECT alert_type, severity, message, created_at FROM alert_events WHERE tenant_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1`, [tenantId])
   ]);
+  const sources = source.rows;
+  const conflictCounts = conflicts.rows[0] ?? { active: '0', resolved: '0', oscillation_hold: '0' };
+  const proposalRows = proposals.rows as Array<{ status: string; count: number }>;
+  const invariantRow = invariant.rows[0] as { summary?: { fail?: number; unchecked?: number }; windowed_fail?: string | number } | undefined;
+  const spendRow = spend.rows[0] ?? { cap_microcents: '0', reserved_microcents: '0', actual_microcents: '0', released_microcents: '0' };
+  const latestRun = sync.rows[0] as { summary?: { acceptedRecords?: number } } | undefined;
+  const ingestedAccepted = sources.reduce((sum, row) => sum + Number((row as { accepted_count?: string | number }).accepted_count ?? 0), 0);
+  const latestRunAccepted = Number(latestRun?.summary?.acceptedRecords ?? ingestedAccepted);
   return {
-    sources: source.rows,
-    conflicts: conflicts.rows[0] ?? { active: '0', resolved: '0', oscillation_hold: '0' },
-    proposals: proposals.rows,
+    sources,
+    conflicts: conflictCounts,
+    proposals: proposalRows,
     invariant: invariant.rows[0] ?? null,
-    spend: spend.rows[0] ?? { cap_microcents: '0', reserved_microcents: '0', actual_microcents: '0', released_microcents: '0' },
-    latestRun: sync.rows[0] ?? null
+    spend: spendRow,
+    latestRun: sync.rows[0] ?? null,
+    stretch: {
+      incidentGroups: groups.rows[0]?.groups ?? 0,
+      groupedConflicts: groups.rows[0]?.members ?? 0,
+      extractedTickets: tickets.rows[0]?.tickets ?? 0
+    },
+    latestAlert: alerts.rows[0] ?? null,
+    reconciliation: reconcileDashboardFigures({
+      ingestedAccepted,
+      latestRunAccepted,
+      invariantFail: Number(invariantRow?.windowed_fail ?? invariantRow?.summary?.fail ?? 0),
+      conflictsActive: Number(conflictCounts.active),
+      proposalsPending: Number(proposalRows.find(({ status }) => status === 'pending')?.count ?? 0),
+      spendActual: Number((spendRow as { actual_microcents: string }).actual_microcents),
+      spendCap: Number((spendRow as { cap_microcents: string }).cap_microcents)
+    }),
+    evidenceWindow: { from }
   };
 }
 
@@ -119,11 +159,19 @@ export async function getConflictDetail(pool: DatabasePool, tenantId: string, co
   const proposalId = proposal.rows[0]?.id as string | undefined;
   const audits = await pool.query(`SELECT event_type, actor, object_type, object_id, metadata, created_at FROM audit_events
     WHERE tenant_id = $1 AND (object_id = $2 OR ($3::text IS NOT NULL AND object_id = $3)) ORDER BY created_at, id`, [tenantId, conflictId, proposalId ?? null]);
-  return { ...conflict.rows[0], proposal: proposal.rows[0] ?? null, lineage: lineage.rows, audit: audits.rows };
+  const group = await pool.query(`SELECT groups.id, groups.label, groups.member_count, members.distance_bp
+    FROM incident_group_members members
+    JOIN incident_groups groups ON groups.tenant_id = members.tenant_id AND groups.id = members.group_id
+    WHERE members.tenant_id = $1 AND members.conflict_id = $2`, [tenantId, conflictId]);
+  const tickets = await pool.query(`SELECT id, student_ref, family_ref, system, record_id, issue_type, status, owner, requested_action, resolution, opened_at, resolved_at
+    FROM extracted_tickets WHERE tenant_id = $1 AND conflict_id = $2 ORDER BY opened_at DESC NULLS LAST, id LIMIT 20`, [tenantId, conflictId]);
+  return { ...conflict.rows[0], proposal: proposal.rows[0] ?? null, lineage: lineage.rows, audit: audits.rows, incidentGroup: group.rows[0] ?? null, tickets: tickets.rows };
 }
 
 export interface ProposalFilters {
   status?: string;
+  type?: string;
+  source?: string;
   minimumConfidenceBp?: number;
   limit: number;
 }
@@ -131,14 +179,18 @@ export interface ProposalFilters {
 export async function listProposals(pool: DatabasePool, tenantId: string, filters: ProposalFilters): Promise<unknown[]> {
   return (await pool.query(`SELECT proposals.*, conflicts.type AS conflict_type, conflicts.entity_refs, conflicts.sources_involved, conflicts.disagreeing_fields
     FROM proposals JOIN conflicts ON conflicts.tenant_id = proposals.tenant_id AND conflicts.id = proposals.conflict_id
-    WHERE proposals.tenant_id = $1 AND ($2::text IS NULL OR proposals.status = $2) AND ($3::integer IS NULL OR proposals.confidence_bp >= $3)
-    ORDER BY proposals.created_at DESC, proposals.id LIMIT $4`, [tenantId, filters.status ?? null, filters.minimumConfidenceBp ?? null, filters.limit])).rows;
+    WHERE proposals.tenant_id = $1
+      AND ($2::text IS NULL OR proposals.status = $2)
+      AND ($3::integer IS NULL OR proposals.confidence_bp >= $3)
+      AND ($4::text IS NULL OR conflicts.type = $4)
+      AND ($5::text IS NULL OR $5 = ANY(conflicts.sources_involved))
+    ORDER BY proposals.created_at DESC, proposals.id LIMIT $6`, [tenantId, filters.status ?? null, filters.minimumConfidenceBp ?? null, filters.type ?? null, filters.source ?? null, filters.limit])).rows;
 }
 
 export async function decideProposal(pool: DatabasePool, context: TenantContext, proposalId: string, decision: ProposalDecision, reason: string, version: number, requestId: string): Promise<Record<string, unknown> | undefined> {
   if (context.role !== 'reviewer') throw new Error('reviewer_required');
   return inTransaction(pool, async (client) => {
-    const current = await client.query<{ status: 'pending' | 'approved' | 'rejected' | 'held' | 'superseded'; version: number }>('SELECT status, version FROM proposals WHERE tenant_id = $1 AND id = $2 FOR UPDATE', [context.tenantId, proposalId]);
+    const current = await client.query<{ status: 'pending' | 'approved' | 'rejected' | 'held' | 'superseded' | 'applied' | 'rolled_back'; version: number }>('SELECT status, version FROM proposals WHERE tenant_id = $1 AND id = $2 FOR UPDATE', [context.tenantId, proposalId]);
     const row = current.rows[0];
     if (!row) return undefined;
     if (row.version !== version) throw new Error('proposal_version_stale');
@@ -146,7 +198,7 @@ export async function decideProposal(pool: DatabasePool, context: TenantContext,
     const updated = await client.query(`UPDATE proposals SET status = $3, version = version + 1, updated_at = now() WHERE tenant_id = $1 AND id = $2 RETURNING *`, [context.tenantId, proposalId, status]);
     await client.query(`INSERT INTO proposal_decisions(id, tenant_id, proposal_id, decision, reason, actor, proposal_version)
       VALUES ($1, $2, $3, $4, $5, $6, $7)`, [randomUUID(), context.tenantId, proposalId, decision, reason, `fixture-reviewer:${context.tenantSlug}`, version]);
-    const metadata = { decision, reason, from: row.status, to: status, version };
+    const metadata = redactMetadata({ decision, reason, from: row.status, to: status, version }, 'redacted');
     await client.query(`INSERT INTO audit_events(id, tenant_id, event_type, actor, request_id, object_type, object_id, metadata, event_hash)
       VALUES ($1, $2, 'proposal_decided', $3, $4, 'proposal', $5, $6::jsonb, $7)`, [randomUUID(), context.tenantId, `fixture-reviewer:${context.tenantSlug}`, requestId, proposalId, JSON.stringify(metadata), sha256(stableStringify(metadata))]);
     return updated.rows[0];
@@ -162,7 +214,8 @@ export async function getEntity(pool: DatabasePool, tenantId: string, entityId: 
     JOIN source_records records ON records.id = links.source_record_id
     JOIN active_snapshots active ON active.tenant_id = records.tenant_id AND active.source_kind = records.source_kind AND active.snapshot_id = records.snapshot_id
     WHERE links.tenant_id = $1 AND links.canonical_entity_id = $2 ORDER BY records.source_kind, records.entity_kind, records.source_id`, [tenantId, entityId]);
-  return { ...entity.rows[0], links: links.rows };
+  const row = entity.rows[0] as { summary: Record<string, unknown> };
+  return { ...row, summary: publicEntitySummary(row.summary ?? {}), links: links.rows };
 }
 
 export async function getRun(pool: DatabasePool, tenantId: string, runId: string): Promise<Record<string, unknown> | undefined> {
@@ -176,4 +229,38 @@ export async function getRun(pool: DatabasePool, tenantId: string, runId: string
   const invariants = await pool.query(`SELECT rule_set_version, status, source_availability, summary, started_at, completed_at FROM invariant_runs
     WHERE tenant_id = $1 AND sync_run_id = $2 ORDER BY started_at`, [tenantId, runId]);
   return { kind: 'sync', ...sync.rows[0], sources: sources.rows, invariants: invariants.rows };
+}
+
+export async function listIncidentGroups(pool: DatabasePool, tenantId: string, limit: number): Promise<unknown[]> {
+  return (await pool.query(`SELECT groups.id, groups.label, groups.member_count, groups.created_at,
+      (
+        SELECT other.id FROM incident_groups other
+        WHERE other.tenant_id = groups.tenant_id AND other.id <> groups.id
+        ORDER BY other.centroid <=> groups.centroid
+        LIMIT 1
+      ) AS nearest_group_id
+    FROM incident_groups groups
+    WHERE groups.tenant_id = $1
+    ORDER BY groups.member_count DESC, groups.id
+    LIMIT $2`, [tenantId, limit])).rows;
+}
+
+export async function listTickets(pool: DatabasePool, tenantId: string, filters: { issueType?: string; status?: string; limit: number }): Promise<unknown[]> {
+  return (await pool.query(`SELECT id, message_id, conflict_id, student_ref, family_ref, system, record_id, issue_type, status, owner,
+      requested_action, resolution, opened_at, resolved_at, extraction_version
+    FROM extracted_tickets
+    WHERE tenant_id = $1 AND ($2::text IS NULL OR issue_type = $2) AND ($3::text IS NULL OR status = $3)
+    ORDER BY opened_at DESC NULLS LAST, id
+    LIMIT $4`, [tenantId, filters.issueType ?? null, filters.status ?? null, filters.limit])).rows;
+}
+
+export async function listProposalApplications(pool: DatabasePool, tenantId: string, limit: number): Promise<unknown[]> {
+  return (await pool.query(`SELECT applications.id, applications.proposal_id, applications.conflict_id, applications.status, applications.applied_at, applications.rolled_back_at,
+      proposals.confidence_bp, proposals.sensitive_hold, conflicts.type AS conflict_type
+    FROM proposal_applications applications
+    JOIN proposals ON proposals.tenant_id = applications.tenant_id AND proposals.id = applications.proposal_id
+    JOIN conflicts ON conflicts.tenant_id = applications.tenant_id AND conflicts.id = applications.conflict_id
+    WHERE applications.tenant_id = $1
+    ORDER BY applications.applied_at DESC, applications.id
+    LIMIT $2`, [tenantId, limit])).rows;
 }

@@ -14,6 +14,11 @@ export interface OverviewData {
   invariant: { status: string; summary: { pass?: number; fail?: number; unchecked?: number; error?: number }; source_availability: Record<string, string>; completed_at: string } | null;
   spend: { cap_microcents: string; reserved_microcents: string; actual_microcents: string; released_microcents: string };
   latestRun: { id: string; status: string; requested_generation: number; source_availability: Record<string, string>; completed_at: string | null } | null;
+  stretch?: { incidentGroups: number; groupedConflicts: number; extractedTickets: number };
+  privacy?: { mode: string; retentionDays: number; policyVersion: string; audit: string; alerts: string };
+  latestAlert: { alert_type: string; severity: string; message: string; created_at: string } | null;
+  reconciliation: { ok: boolean; checks: Array<{ name: string; actual: number; expected: number; ok: boolean }> };
+  evidenceWindow?: { from: string | null };
 }
 
 export interface ConflictRow {
@@ -50,7 +55,7 @@ export interface Proposal {
   confidence_signals: Record<string, unknown>;
   sensitive_fields: string[];
   sensitive_hold: boolean;
-  status: 'pending' | 'approved' | 'rejected' | 'held' | 'superseded';
+  status: 'pending' | 'approved' | 'rejected' | 'held' | 'superseded' | 'applied' | 'rolled_back';
   version: number;
   estimated_cost_microcents: string;
   actual_cost_microcents: string;
@@ -79,6 +84,31 @@ export interface AuditRow {
   created_at: string;
 }
 
+export interface IncidentGroup {
+  id: string;
+  label: string;
+  member_count: number;
+  created_at: string;
+  nearest_group_id: string | null;
+}
+
+export interface ExtractedTicket {
+  id: string;
+  message_id: string;
+  conflict_id: string | null;
+  student_ref: string | null;
+  family_ref: string | null;
+  system: string;
+  record_id: string | null;
+  issue_type: string;
+  status: string;
+  owner: string;
+  requested_action: string;
+  resolution: string | null;
+  opened_at: string | null;
+  resolved_at: string | null;
+}
+
 export interface ConflictDetail extends ConflictRow {
   rule_id: string;
   rule_version: string;
@@ -87,6 +117,8 @@ export interface ConflictDetail extends ConflictRow {
   proposal: Proposal | null;
   lineage: LineageRow[];
   audit: AuditRow[];
+  incidentGroup: { id: string; label: string; member_count: number; distance_bp: number } | null;
+  tickets: ExtractedTicket[];
 }
 
 export interface ConflictFilters {

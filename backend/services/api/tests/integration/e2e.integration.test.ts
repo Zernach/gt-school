@@ -33,7 +33,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ respo
   return { response, body };
 }
 
-async function startJob(path: '/api/v1/jobs/sync' | '/api/v1/jobs/reconcile', secret: string, idempotencyKey: string, extra: Record<string, unknown> = {}): Promise<{ response: Response; reference: JobReference }> {
+async function startJob(path: '/api/v1/jobs/sync' | '/api/v1/jobs/reconcile' | '/api/v1/jobs/stretch', secret: string, idempotencyKey: string, extra: Record<string, unknown> = {}): Promise<{ response: Response; reference: JobReference }> {
   const { response, body } = await request<JobReference>(path, {
     method: 'POST',
     headers: { ...reviewerHeaders, 'x-keystone-trigger-secret': secret, 'content-type': 'application/json' },
@@ -204,9 +204,14 @@ describe.sequential('live Compose vertical contract', () => {
       conflicts: { active: string };
       proposals: Array<{ status: string; count: number }>;
       spend: { cap_microcents: string; actual_microcents: string; reserved_microcents: string };
+      invariant: { summary: { fail: number } };
+      reconciliation: { ok: boolean; checks: Array<{ name: string; ok: boolean }> };
     }>('/api/v1/overview', { headers: reviewerHeaders });
     expect(overview.body.data.conflicts.active).toBe('3050');
+    expect(overview.body.data.invariant.summary.fail).toBe(3050);
     expect(overview.body.data.proposals.reduce((sum, row) => sum + row.count, 0)).toBe(3050);
+    expect(overview.body.data.reconciliation.ok).toBe(true);
+    expect(overview.body.data.reconciliation.checks.every(({ ok }) => ok)).toBe(true);
     expect(BigInt(overview.body.data.spend.actual_microcents)).toBeLessThanOrEqual(BigInt(overview.body.data.spend.cap_microcents));
     expect(overview.body.data.spend.reserved_microcents).toBe(overview.body.data.spend.actual_microcents);
 
@@ -215,6 +220,62 @@ describe.sequential('live Compose vertical contract', () => {
     expect(proposals.body.data.every(({ status, evidence, confidence_bp }) => status === 'pending' && Boolean(evidence) && confidence_bp >= 0 && confidence_bp <= 10_000)).toBe(true);
     expect(proposals.body.data.some(({ sensitive_hold }) => sensitive_hold)).toBe(true);
   }, 150_000);
+
+  test('runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged', async () => {
+    const started = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, 'integration-stretch-424242-v1');
+    expect([200, 202]).toContain(started.response.status);
+    const run = await waitForJob(started.reference.id, 180_000);
+    expect(run.status).toBe('complete');
+    expect(run.result.status).toBe('complete');
+    const grouping = run.result.grouping as { memberCount: number; groupCount: number; dimensions: number; model: string };
+    const tickets = run.result.tickets as { extracted: number; matchedConflicts: number };
+    const autoApply = run.result.autoApply as { applied: number; denied: number; sensitiveDenied: number; sourceMirrorHashBefore: string; sourceMirrorHashAfter: string };
+    expect(grouping.model).toBe('conflict-pattern-hash-v1');
+    expect(grouping.dimensions).toBe(64);
+    expect(grouping.memberCount).toBe(3050);
+    expect(grouping.groupCount).toBeGreaterThan(0);
+    expect(tickets.extracted).toBe(3050);
+    expect(tickets.matchedConflicts).toBe(3050);
+    expect(autoApply.sourceMirrorHashAfter).toBe(autoApply.sourceMirrorHashBefore);
+    expect(autoApply.sensitiveDenied).toBeGreaterThan(0);
+    expect(autoApply.applied + autoApply.denied).toBe(3050);
+
+    const groups = await request<Array<{ id: string; label: string; member_count: number; nearest_group_id: string | null }>>('/api/v1/incident-groups?limit=50', { headers: reviewerHeaders });
+    expect(groups.response.status).toBe(200);
+    expect(groups.body.data.length).toBeGreaterThan(0);
+    expect(groups.body.data.every((group) => group.member_count >= 1)).toBe(true);
+
+    const extracted = await request<Array<{ student_ref: string | null; family_ref: string | null; system: string; record_id: string | null; issue_type: string; owner: string; requested_action: string }>>('/api/v1/tickets?limit=50', { headers: reviewerHeaders });
+    expect(extracted.response.status).toBe(200);
+    expect(extracted.body.data.length).toBeGreaterThan(0);
+    expect(extracted.body.data.every((ticket) => ticket.issue_type && ticket.owner && ticket.requested_action && ticket.system)).toBe(true);
+
+    const overview = await request<{
+      stretch: { incidentGroups: number; extractedTickets: number };
+      privacy: { mode: string; retentionDays: number };
+      proposals: Array<{ status: string; count: number }>;
+    }>('/api/v1/overview', { headers: reviewerHeaders });
+    expect(overview.body.data.privacy.mode).toBe('redacted');
+    expect(overview.body.data.privacy.retentionDays).toBe(config.LOG_RETENTION_DAYS);
+    expect(overview.body.data.stretch.extractedTickets).toBe(3050);
+    const applied = overview.body.data.proposals.find(({ status }) => status === 'applied')?.count ?? 0;
+    expect(applied).toBe(autoApply.applied);
+
+    const appliedRows = await request<Array<{ id: string; sensitive_hold: boolean; confidence_bp: number; status: string; version: number }>>('/api/v1/proposals?status=applied&limit=100', { headers: reviewerHeaders });
+    expect(appliedRows.body.data.every((proposal) => proposal.status === 'applied' && !proposal.sensitive_hold && proposal.confidence_bp >= 9500)).toBe(true);
+    const pending = await request<Array<{ sensitive_hold: boolean }>>('/api/v1/proposals?status=pending&limit=100', { headers: reviewerHeaders });
+    expect(pending.body.data.some((proposal) => proposal.sensitive_hold)).toBe(true);
+
+    const appliedProposal = appliedRows.body.data[0];
+    if (appliedProposal) {
+      const rolled = await fetch(`${baseUrl}/api/v1/proposals/${appliedProposal.id}/rollback`, { method: 'POST', headers: reviewerHeaders });
+      expect(rolled.status).toBe(200);
+      const rolledBody = await rolled.json() as Envelope<{ status: string }>;
+      expect(rolledBody.data.status).toBe('rolled_back');
+      const viewerRollback = await fetch(`${baseUrl}/api/v1/proposals/${appliedProposal.id}/rollback`, { method: 'POST', headers: viewerHeaders });
+      expect(viewerRollback.status).toBe(403);
+    }
+  }, 180_000);
 
   test('does not let viewer scope decide a proposal', async () => {
     const proposals = await request<Array<{ id: string; version: number }>>('/api/v1/proposals?status=pending&limit=1', { headers: viewerHeaders });
@@ -237,6 +298,11 @@ describe.sequential('live Compose vertical contract', () => {
     const duplicateReconcile = await startJob('/api/v1/jobs/reconcile', config.RECONCILE_TRIGGER_SECRET, 'integration-reconcile-424242-v1');
     expect(duplicateReconcile.response.status).toBe(200);
     expect(duplicateReconcile.reference).toEqual({ id: reconcileJob.id, status: 'complete', duplicate: true });
+
+    const duplicateStretch = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, 'integration-stretch-424242-v1');
+    expect(duplicateStretch.response.status).toBe(200);
+    expect(duplicateStretch.reference.duplicate).toBe(true);
+    expect(duplicateStretch.reference.status).toBe('complete');
   });
 
   test('degrades a real 5xx source to a structured partial run without hanging', async () => {

@@ -8,6 +8,13 @@ export const SENSITIVE_FIELDS = new Set([
   'marketing_consent', 'communication_opt_out', 'privacy_state'
 ]);
 
+export const AUTO_APPLY_CASE_TYPES = new Set<ConflictType>([
+  'paid_but_no_deal',
+  'stale_crm_pointer',
+  'dropped_sibling',
+  'material_field_disagreement'
+]);
+
 const ACTION_BY_TYPE: Record<ConflictType, { kind: string; targetField: string }> = {
   paid_but_no_deal: { kind: 'link_or_create_deal_review', targetField: 'crm_deal_id' },
   payment_with_no_person: { kind: 'link_payment_review', targetField: 'person_link' },
@@ -27,11 +34,19 @@ const ACTION_BY_TYPE: Record<ConflictType, { kind: string; targetField: string }
 
 export interface CandidateAction {
   kind: string;
+  conflictType: ConflictType;
   targetField: string;
   proposedValue: string;
   policyVersion: typeof ACTION_POLICY_VERSION;
   sensitiveFields: string[];
   fingerprint: string;
+}
+
+export interface AutoApplyGate {
+  action: CandidateAction;
+  confidenceBp: number;
+  evidenceComplete: boolean;
+  rollbackAvailable: boolean;
 }
 
 export function candidateAction(conflict: DetectedConflict): CandidateAction {
@@ -45,9 +60,30 @@ export function candidateAction(conflict: DetectedConflict): CandidateAction {
     proposedValue,
     policyVersion: ACTION_POLICY_VERSION
   });
-  return { ...policy, proposedValue, policyVersion: ACTION_POLICY_VERSION, sensitiveFields, fingerprint };
+  return {
+    ...policy,
+    conflictType: conflict.type,
+    proposedValue,
+    policyVersion: ACTION_POLICY_VERSION,
+    sensitiveFields,
+    fingerprint
+  };
 }
 
-export function canAutoApply(action: CandidateAction, confidenceBp: number, approved: boolean, rollbackAvailable: boolean): boolean {
-  return approved && rollbackAvailable && confidenceBp >= 9500 && action.sensitiveFields.length === 0;
+export function approvedAutoApplyCase(conflictType: ConflictType): boolean {
+  return AUTO_APPLY_CASE_TYPES.has(conflictType);
+}
+
+export function canAutoApply(action: CandidateAction, confidenceBp: number, evidenceComplete: boolean, rollbackAvailable: boolean): boolean {
+  return evaluateAutoApply({ action, confidenceBp, evidenceComplete, rollbackAvailable }).eligible;
+}
+
+export function evaluateAutoApply(gate: AutoApplyGate): { eligible: boolean; denials: string[] } {
+  const denials: string[] = [];
+  if (!approvedAutoApplyCase(gate.action.conflictType)) denials.push('case_type_not_approved');
+  if (gate.action.sensitiveFields.length > 0) denials.push('sensitive_field');
+  if (gate.confidenceBp < 9500) denials.push('confidence_below_095');
+  if (!gate.evidenceComplete) denials.push('evidence_incomplete');
+  if (!gate.rollbackAvailable) denials.push('rollback_unavailable');
+  return { eligible: denials.length === 0, denials };
 }

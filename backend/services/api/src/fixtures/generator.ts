@@ -7,6 +7,7 @@ import { resolveFixtureIdentities } from '../domain/identity.js';
 import { buildConflict } from '../domain/invariants.js';
 import { normalizeEmail, timestampIsReversed } from '../domain/normalization.js';
 import { sha256, stableStringify, stableUuid } from '../domain/stable.js';
+import { shapePublicEntityView, buildCanonicalProjection } from '../ingestion/projection.js';
 
 export const CANONICAL_SEED = 424242;
 export const REQUIRED_COUNTS = { crmContacts: 40_000, crmDeals: 15_000, appStudents: 25_000, appEnrollments: 22_000, payments: 18_000 } as const;
@@ -373,6 +374,8 @@ export async function generateFixtures(options: GenerateOptions): Promise<Record
   const cleanSample = students.filter(({ id }) => !conflictStudentIds.has(id)).slice(0, 1000).map((student) => ({ entity_ref: `student:${student.id}`, expected_conflicts: [], fixture_hash: sha256(stableStringify(student)) }));
   if (cleanSample.length !== 1000) throw new Error('clean_sample_too_small');
   await writeJson(join(options.goldenRoot, 'clean-sample.json'), cleanSample);
+  const projection = buildCanonicalProjection({ crmContacts: contacts, crmDeals: deals, appStudents: students, appEnrollments: enrollments, payments });
+  await writeJson(join(options.goldenRoot, 'entity-view.json'), shapePublicEntityView(projection, `entity:${cleanSample[0]!.entity_ref.slice('student:'.length)}`));
   const outputStats = await stat(join(options.outputRoot, 'manifest.json'));
   return { ...manifest, manifestBytes: outputStats.size };
 }

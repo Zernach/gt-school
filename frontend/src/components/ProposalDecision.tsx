@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { decideProposal } from '../api';
+import { decideProposal, rollbackProposal } from '../api';
 import type { Proposal } from '../types';
 
 export function ProposalDecision({ proposal, onDecided }: { proposal: Proposal; onDecided: (proposal: Proposal) => void }) {
@@ -22,6 +22,33 @@ export function ProposalDecision({ proposal, onDecided }: { proposal: Proposal; 
       setBusy(false);
     }
   };
+  const rollback = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!confirmed) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await rollbackProposal(proposal.id);
+      onDecided({ ...proposal, ...result, status: result.status ?? 'rolled_back' });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Rollback failed. Reload and retry.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (proposal.status === 'applied') {
+    return (
+      <form className="decision-form" onSubmit={(event) => { void rollback(event); }}>
+        <fieldset disabled={busy}>
+          <legend>Roll back auto-apply</legend>
+          <p>This undoes Keystone auto-apply only. The proposal becomes rolled back and will not auto-apply again. Source systems remain unchanged.</p>
+          <label className="confirm-row"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} required />I confirm this rollback and understand it does not mutate a source system.</label>
+          {error ? <p className="inline-error" role="alert">{error}</p> : null}
+          <button className="primary-button" type="submit" disabled={!confirmed || busy}>{busy ? 'Rolling back…' : 'Confirm rollback'}</button>
+        </fieldset>
+      </form>
+    );
+  }
   if (proposal.status !== 'pending') return <p className="decision-complete" role="status">Decision recorded: {proposal.status}. This changed Keystone review state only.</p>;
   return (
     <form className="decision-form" onSubmit={(event) => { void submit(event); }}>

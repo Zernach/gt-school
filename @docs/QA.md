@@ -6,16 +6,20 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 
 | Requirement | Owning implementation | Automated proof |
 |---|---|---|
-| Three read-only sources, immutable mirror, ingest time, field lineage | `sources/`, `ingestion/sync.ts`, DB grants/tables | source, lineage/projection, sync unit suites; live integration entity/conflict detail; role inspection |
-| Versioned continuous invariants; exact golden set | `domain/invariants.ts`, `config/invariants.v1.json` | `npm run test:golden`: 3,050 expected/detected, zero false positives/negatives; 1,000 clean rows |
-| Unified cross-source entity question | projection + `GET /api/v1/entities/:id` | committed `golden/entity-view.json` hand-check and live integration equality |
-| Auditable filterable dashboard | overview/conflict/proposal API + React components | 250 frontend unit cases; 10 Playwright cases across desktop/narrow Chromium; live API reconciliation totals |
-| Proposal-only reconciler | policy/provider/confidence/reconcile modules | unit matrices + live 3,050 proposal/dedup accounting + before/after mirror hash equality |
-| Hard daily/run spend cap | transactional spend ledger | unit settlement/failure tests + `npm run test:spend-cap` real concurrent Postgres burst |
+| Three read-only sources, immutable mirror, ingest time, field lineage | `sources/`, `ingestion/sync.ts`, DB grants/tables | source, lineage/projection, sync unit suites (ingest timestamp + per-record lineage); live integration entity/conflict detail; role inspection |
+| Versioned continuous invariants; exact golden set | `domain/invariants.ts`, `config/invariants.v1.json` loaded at API/worker start | `npm run test:golden`: 3,050 expected/detected, zero false positives/negatives; 1,000 clean rows; committed-oracle equality |
+| Unified cross-source entity question | projection + `GET /api/v1/entities/:id` (public summary, no internal `raw`) | committed `golden/entity-view.json` generator-backed hand-check, unit projection, and live integration equality |
+| Auditable filterable dashboard | overview/conflict/proposal API + React components | figure-reconciliation object (`ok` + checks) vs ingestion/invariant/proposal/spend logs; proposal evidence + audit metadata;  frontend unit + Playwright |
+| Proposal-only reconciler | policy/provider/confidence/reconcile modules + worker UTC-day schedule | unit matrices + live 3,050 proposal/dedup accounting + before/after mirror hash equality; scheduled job idempotency |
+| Hard daily/run spend cap | transactional spend ledger | unit settlement/failure tests + `npm run test:spend-cap` real concurrent Postgres burst; dashboard `latestAlert` + spend check |
 | Timeout/5xx/partial source | fault adapter + bounded source reader | fake-timer unit tests and live 5xx partial integration; all-or-nothing active snapshot assertion |
 | Malformed/oversized input | streaming fixture reader, Zod, Fastify limit | 21 malformed generator cases; live 400/413/422 assertions |
 | Duplicate/ambiguous identity and siblings | identity index + occurrence/household schema | property/scenario tests and golden overlaps/household minima |
-| Sensitive holds and deterministic confidence | policy + confidence-v1 | exhaustive policy/confidence tests; live pending queue includes hard holds |
+| Sensitive holds and deterministic confidence | policy + confidence-v2 | exhaustive policy/confidence tests; live pending queue includes hard holds |
+| Confidence-gated auto-apply | `autoApplyEligibleProposals`, `proposal_applications` | unit gate + live stretch: ≥0.95, allowlisted types, complete evidence, rollback snapshot, zero sensitive applies, source-mirror hash unchanged |
+| Semantic incident grouping | `conflict-pattern-hash-v1` 64-d cosine HNSW | unit embedding/cluster tests; live `GET /incident-groups` with pgvector `<=>` nearest group |
+| Structured ticket extraction | `extracted_tickets` | unit round-trip of joinable fields; live `GET /tickets` |
+| PII-redaction and retention | `privacy-v1`, `LOG_RETENTION_DAYS` | redaction unit suite; overview privacy blob; alert deletion recorded in `log_retention_runs` |
 | Durable/replay-safe jobs | jobs table + Redis consumer group | API idempotency integration, live abandoned/duplicate delivery restart harness, replay reconciliation with zero provider calls |
 | Tenant/reviewer isolation | key hashes and tenant-bound SQL | auth integration, viewer decision 403, query unit contracts, optimistic-version tests |
 | Health/logging/privacy | API/worker health, redaction, audit | health integration, redaction unit suite, container health and structured logs |

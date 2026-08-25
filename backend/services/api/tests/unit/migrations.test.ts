@@ -106,6 +106,7 @@ describe('least-privilege runtime role provisioning', () => {
     expect(statements).toContain('GRANT SELECT ON ALL TABLES IN SCHEMA public');
     expect(statements).toContain('GRANT INSERT, UPDATE ON sync_runs, source_runs, source_snapshots, active_snapshots');
     expect(statements).toContain('GRANT INSERT ON source_records, field_observations, entity_links, household_memberships');
+    expect(statements).toContain('GRANT DELETE ON incident_embeddings, incident_groups, incident_group_members, alert_events');
     expect(statements).not.toContain('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public');
   });
 

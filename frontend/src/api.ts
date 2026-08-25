@@ -1,4 +1,4 @@
-import type { ConflictDetail, ConflictFilters, ConflictList, OverviewData, Proposal } from './types';
+import type { ConflictDetail, ConflictFilters, ConflictList, ExtractedTicket, IncidentGroup, OverviewData, Proposal } from './types';
 
 const clientKey = import.meta.env.VITE_DEMO_CLIENT_KEY ?? 'fixture-demo-reviewer-key-only';
 
@@ -36,8 +36,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return payload.data;
 }
 
-export function getOverview(signal?: AbortSignal): Promise<OverviewData> {
-  return request<OverviewData>('/api/v1/overview', signal ? { signal } : {});
+export function getOverview(signal?: AbortSignal, from?: string): Promise<OverviewData> {
+  const query = new URLSearchParams();
+  if (from) query.set('from', from);
+  const path = query.size ? `/api/v1/overview?${query}` : '/api/v1/overview';
+  return request<OverviewData>(path, signal ? { signal } : {});
 }
 
 export function getConflicts(filters: ConflictFilters, cursor?: string, signal?: AbortSignal): Promise<ConflictList> {
@@ -51,10 +54,20 @@ export function getConflict(id: string, signal?: AbortSignal): Promise<ConflictD
   return request<ConflictDetail>(`/api/v1/conflicts/${encodeURIComponent(id)}`, signal ? { signal } : {});
 }
 
-export function getProposals(status = '', signal?: AbortSignal): Promise<Proposal[]> {
+export function getProposals(status = '', signal?: AbortSignal, extras: { type?: string; source?: string } = {}): Promise<Proposal[]> {
   const query = new URLSearchParams({ limit: '50' });
   if (status) query.set('status', status);
+  if (extras.type) query.set('type', extras.type);
+  if (extras.source) query.set('source', extras.source);
   return request<Proposal[]>(`/api/v1/proposals?${query}`, signal ? { signal } : {});
+}
+
+export function getIncidentGroups(signal?: AbortSignal): Promise<IncidentGroup[]> {
+  return request<IncidentGroup[]>('/api/v1/incident-groups?limit=50', signal ? { signal } : {});
+}
+
+export function getTickets(signal?: AbortSignal): Promise<ExtractedTicket[]> {
+  return request<ExtractedTicket[]>('/api/v1/tickets?limit=50', signal ? { signal } : {});
 }
 
 export function decideProposal(id: string, decision: 'approve' | 'reject' | 'hold', reason: string, version: number): Promise<Proposal> {
@@ -63,4 +76,8 @@ export function decideProposal(id: string, decision: 'approve' | 'reject' | 'hol
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ decision, reason, version })
   });
+}
+
+export function rollbackProposal(id: string): Promise<Proposal> {
+  return request<Proposal>(`/api/v1/proposals/${encodeURIComponent(id)}/rollback`, { method: 'POST' });
 }
