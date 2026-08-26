@@ -144,3 +144,76 @@ If the Pages upload completed, use Workers & Pages > gt-school > Deployments > t
 error Command failed with exit code 1.
 info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
 zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-26T16:11:43-04:00,unavailable,301
+Made benchmark rate-limit aware,"> keystone-reconciliation@1.0.0 test:spend-cap
+> ./backend/docker/compose.sh run --rm -T init node dist/cli/cap-burst.js
+
+[+]  1/1t 1/11
+ ✔ Container gt-school--postgres-1 Running                    0.0s
+Container gt-school--postgres-1 Waiting
+Container gt-school--postgres-1 Healthy
+Container gt-school--init-run-4468f6167073 Creating
+Container gt-school--init-run-4468f6167073 Created
+{
+  ""status"": ""pass"",
+  ""attemptedCalls"": 20,
+  ""allowedCalls"": 5,
+  ""deniedCalls"": 15,
+  ""exactCapMicrocents"": ""50"",
+  ""providerCalls"": 5,
+  ""capStopAudits"": 15,
+  ""capStopAlerts"": 15,
+  ""duplicateRetry"": ""duplicate"",
+  ""newActionRetry"": ""daily_cap"",
+  ""dashboardSpend"": {
+    ""cap_microcents"": ""50"",
+    ""reserved_microcents"": ""50"",
+    ""actual_microcents"": ""50"",
+    ""released_microcents"": ""0""
+  }
+}
+npm warn Unknown env config ""version-git-tag"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""argv"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-commit-hooks"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-git-message"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-tag-prefix"". This will stop working in the next major version of npm.
+
+> keystone-reconciliation@1.0.0 benchmark
+> npm run benchmark --workspace @keystone/api --
+
+npm warn Unknown env config ""version-git-tag"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""argv"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-commit-hooks"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-git-message"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-tag-prefix"". This will stop working in the next major version of npm.
+
+> @keystone/api@1.0.0 benchmark
+> tsx src/cli/benchmark.ts
+
+/Users/zernach/code/gt-school/backend/services/api/src/cli/benchmark.ts:11
+  if (!response.ok) throw new Error(`benchmark_request_failed:${path}:${response.status}`);
+                          ^
+
+Error: benchmark_request_failed:/api/v1/proposals?status=pending&limit=50:429
+    at fetchChecked (/Users/zernach/code/gt-school/backend/services/api/src/cli/benchmark.ts:11:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Promise.all (index 2)
+    at async <anonymous> (/Users/zernach/code/gt-school/backend/services/api/src/cli/benchmark.ts:41:53)
+    at async measure (/Users/zernach/code/gt-school/backend/services/api/src/cli/benchmark.ts:19:5)
+    at async <anonymous> (/Users/zernach/code/gt-school/backend/services/api/src/cli/benchmark.ts:41:25)
+
+Node.js v24.13.1
+npm error Lifecycle script `benchmark` failed with error:
+npm error code 1
+npm error path /Users/zernach/code/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error location /Users/zernach/code/gt-school/backend/services/api
+npm error command failed
+npm error command sh -c tsx src/cli/benchmark.ts
+Cloudflare demo release stopped: release command failed with exit status 1
+Worker: gt-school-demo-api; uploaded version: not-deployed; Pages project: gt-school; uploaded deployment: not-deployed; source SHA: 67112f472ffa01fae6e0b5072b982e12bbe3fc38.
+If the Worker upload completed, immediately restore its preceding active version with:
+  (cd ""/Users/zernach/code/gt-school/backend/cloudflare"" && npx --no-install wrangler rollback --name ""gt-school-demo-api"" --message ""manual rollback after failed gt-school demo release"")
+If the Pages upload completed, use Workers & Pages > gt-school > Deployments > the prior production deployment > Rollback to this deployment. Pages Direct Upload has no Wrangler rollback command.
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-26T16:30:42-04:00,unavailable,264

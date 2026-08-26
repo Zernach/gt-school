@@ -54,6 +54,8 @@ npm run test:deploy
 
 `test:ratio` counts nonblank production and test lines using committed source roots; tests must be strictly greater. Generated fixtures, golden bulk data, build output, and dependencies are excluded. Coverage independently targets the core logic required by the brief.
 
+`benchmark` performs 80 measured API requests. Before timing begins, it checks the API's standard rate-limit headers and waits, for at most 65 seconds, until the full measurement budget is available. This keeps release-gate traffic from contaminating the benchmark without bypassing or weakening the production limiter; the wait and check count are reported separately from latency.
+
 ## Local evidence snapshot — 2026-08-22
 
 - Backend core: 816 tests; 99.35% statements, 94.96% branches, 99.48% functions, 99.77% lines.

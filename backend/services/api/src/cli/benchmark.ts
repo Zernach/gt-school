@@ -1,4 +1,5 @@
 import { loadConfig } from '../config.js';
+import { waitForRateLimitBudget } from './benchmark-rate-limit.js';
 
 const config = loadConfig();
 const apiPort = process.env.API_PORT ?? String(config.API_CONTAINER_PORT);
@@ -36,8 +37,13 @@ function summarize(timings: readonly number[], targetMs: number): Record<string,
 }
 
 const entityId = 'entity:0338d5d7-d346-49ae-b8ad-02157e262e26';
-const crossSourceEntity = await measure(() => fetchChecked(`/api/v1/entities/${entityId}`));
 const dashboardRoutes = ['/api/v1/overview', '/api/v1/conflicts?limit=50', '/api/v1/proposals?status=pending&limit=50'];
+const rateLimitBudget = await waitForRateLimitBudget({
+  url: `${baseUrl}/health`,
+  headers,
+  requiredRequests: runs * (1 + dashboardRoutes.length)
+});
+const crossSourceEntity = await measure(() => fetchChecked(`/api/v1/entities/${entityId}`));
 const dashboardBundle = await measure(async () => { await Promise.all(dashboardRoutes.map((path) => fetchChecked(path))); });
 const summary = {
   crossSourceEntity: summarize(crossSourceEntity, 1000),
@@ -50,5 +56,6 @@ process.stdout.write(`${JSON.stringify({
   measuredAt: new Date().toISOString(),
   entityId,
   dashboardRoutes,
+  rateLimitBudget,
   summary
 }, null, 2)}\n`);
