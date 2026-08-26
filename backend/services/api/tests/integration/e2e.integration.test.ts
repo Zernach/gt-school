@@ -26,6 +26,13 @@ const config = loadConfig();
 const baseUrl = process.env.INTEGRATION_BASE_URL ?? `http://127.0.0.1:${process.env.API_PORT ?? '3000'}`;
 const viewerHeaders = { 'x-keystone-client-key': config.DEMO_CLIENT_KEY };
 const reviewerHeaders = { 'x-keystone-client-key': config.DEMO_REVIEWER_KEY };
+const invocationId = crypto.randomUUID();
+const jobKeys = {
+  sync: `integration-canonical-424242-${invocationId}`,
+  reconcile: `integration-reconcile-424242-${invocationId}`,
+  stretch: `integration-stretch-424242-${invocationId}`,
+  partial: `integration-partial-crm-424242-${invocationId}`
+};
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<{ response: Response; body: Envelope<T> }> {
   const response = await fetch(`${baseUrl}${path}`, init);
@@ -122,7 +129,7 @@ describe.sequential('live Compose vertical contract', () => {
   });
 
   test('ingests exactly 120,000 source records and detects the 3,050-item golden set', async () => {
-    const started = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, 'integration-canonical-424242-v3');
+    const started = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, jobKeys.sync);
     expect([200, 202]).toContain(started.response.status);
     syncJob = started.reference;
     syncRun = await waitForJob(syncJob.id);
@@ -188,7 +195,7 @@ describe.sequential('live Compose vertical contract', () => {
   });
 
   test('creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror', async () => {
-    const started = await startJob('/api/v1/jobs/reconcile', config.RECONCILE_TRIGGER_SECRET, 'integration-reconcile-424242-v1');
+    const started = await startJob('/api/v1/jobs/reconcile', config.RECONCILE_TRIGGER_SECRET, jobKeys.reconcile);
     expect([200, 202]).toContain(started.response.status);
     reconcileJob = started.reference;
     reconcileRun = await waitForJob(reconcileJob.id);
@@ -222,14 +229,16 @@ describe.sequential('live Compose vertical contract', () => {
   }, 150_000);
 
   test('runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged', async () => {
-    const started = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, 'integration-stretch-424242-v1');
+    const beforeStretch = await request<{ proposals: Array<{ status: string; count: number }> }>('/api/v1/overview', { headers: reviewerHeaders });
+    const appliedBefore = beforeStretch.body.data.proposals.find(({ status }) => status === 'applied')?.count ?? 0;
+    const started = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, jobKeys.stretch);
     expect([200, 202]).toContain(started.response.status);
     const run = await waitForJob(started.reference.id, 180_000);
     expect(run.status).toBe('complete');
     expect(run.result.status).toBe('complete');
     const grouping = run.result.grouping as { memberCount: number; groupCount: number; dimensions: number; model: string };
     const tickets = run.result.tickets as { extracted: number; matchedConflicts: number };
-    const autoApply = run.result.autoApply as { applied: number; denied: number; sensitiveDenied: number; sourceMirrorHashBefore: string; sourceMirrorHashAfter: string };
+    const autoApply = run.result.autoApply as { scanned: number; applied: number; denied: number; sensitiveDenied: number; sourceMirrorHashBefore: string; sourceMirrorHashAfter: string };
     expect(grouping.model).toBe('conflict-pattern-hash-v1');
     expect(grouping.dimensions).toBe(64);
     expect(grouping.memberCount).toBe(3050);
@@ -238,7 +247,8 @@ describe.sequential('live Compose vertical contract', () => {
     expect(tickets.matchedConflicts).toBe(3050);
     expect(autoApply.sourceMirrorHashAfter).toBe(autoApply.sourceMirrorHashBefore);
     expect(autoApply.sensitiveDenied).toBeGreaterThan(0);
-    expect(autoApply.applied + autoApply.denied).toBe(3050);
+    expect(autoApply.scanned).toBeGreaterThan(0);
+    expect(autoApply.applied + autoApply.denied).toBe(autoApply.scanned);
 
     const groups = await request<Array<{ id: string; label: string; member_count: number; nearest_group_id: string | null }>>('/api/v1/incident-groups?limit=50', { headers: reviewerHeaders });
     expect(groups.response.status).toBe(200);
@@ -258,8 +268,9 @@ describe.sequential('live Compose vertical contract', () => {
     expect(overview.body.data.privacy.mode).toBe('redacted');
     expect(overview.body.data.privacy.retentionDays).toBe(config.LOG_RETENTION_DAYS);
     expect(overview.body.data.stretch.extractedTickets).toBe(3050);
+    expect(overview.body.data.proposals.reduce((sum, proposal) => sum + proposal.count, 0)).toBe(3050);
     const applied = overview.body.data.proposals.find(({ status }) => status === 'applied')?.count ?? 0;
-    expect(applied).toBe(autoApply.applied);
+    expect(applied).toBe(appliedBefore + autoApply.applied);
 
     const appliedRows = await request<Array<{ id: string; sensitive_hold: boolean; confidence_bp: number; status: string; version: number }>>('/api/v1/proposals?status=applied&limit=100', { headers: reviewerHeaders });
     expect(appliedRows.body.data.every((proposal) => proposal.status === 'applied' && !proposal.sensitive_hold && proposal.confidence_bp >= 9500)).toBe(true);
@@ -291,22 +302,22 @@ describe.sequential('live Compose vertical contract', () => {
   });
 
   test('returns the same durable job for a repeated idempotency key', async () => {
-    const duplicateSync = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, 'integration-canonical-424242-v3');
+    const duplicateSync = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, jobKeys.sync);
     expect(duplicateSync.response.status).toBe(200);
     expect(duplicateSync.reference).toEqual({ id: syncJob.id, status: 'complete', duplicate: true });
 
-    const duplicateReconcile = await startJob('/api/v1/jobs/reconcile', config.RECONCILE_TRIGGER_SECRET, 'integration-reconcile-424242-v1');
+    const duplicateReconcile = await startJob('/api/v1/jobs/reconcile', config.RECONCILE_TRIGGER_SECRET, jobKeys.reconcile);
     expect(duplicateReconcile.response.status).toBe(200);
     expect(duplicateReconcile.reference).toEqual({ id: reconcileJob.id, status: 'complete', duplicate: true });
 
-    const duplicateStretch = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, 'integration-stretch-424242-v1');
+    const duplicateStretch = await startJob('/api/v1/jobs/stretch', config.STRETCH_TRIGGER_SECRET, jobKeys.stretch);
     expect(duplicateStretch.response.status).toBe(200);
     expect(duplicateStretch.reference.duplicate).toBe(true);
     expect(duplicateStretch.reference.status).toBe('complete');
   });
 
   test('degrades a real 5xx source to a structured partial run without hanging', async () => {
-    const started = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, 'integration-partial-crm-424242-v1', { faultSource: 'crm', faultMode: '5xx' });
+    const started = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, jobKeys.partial, { faultSource: 'crm', faultMode: '5xx' });
     expect([200, 202]).toContain(started.response.status);
     const run = await waitForJob(started.reference.id);
     expect(run.status).toBe('complete');

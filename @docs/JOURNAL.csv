@@ -73,3 +73,74 @@ Implement REQUIREMENTS stretch goals 7-10 end-to-end,"Plan & implement end-to-en
 Add start.sh Deploy target menu,the @scripts/start.sh needs option for deploy: and user can choose frontend or backend or both,2026-08-24T22:21:37-04:00,unavailable,277
 Match Keystone browser tab favicon to gt.school,the keystone ico icon in the browser tab should use the same ico icon image that https://www.gt.school,2026-08-26T15:27:57-0400,unavailable,unavailable
 Hardened transient backend restoration,"due to the nature of our transient back-end, if a user does not open the website within a certain number of hours, then the back-end resets, and the next user sees an empty frontend with all zeros everywhere. we need to make this more resilient, where if the user comes to an empty back-end, it must automatically trigger repopulation QUICKLY, and the frontend needs appropriate loading indicator(s)",2026-08-26T15:35:40-04:00,unavailable,537
+Made integration jobs replay-safe,"> keystone-reconciliation@1.0.0 test:integration
+> npm run test:integration --workspace @keystone/api --
+
+npm warn Unknown env config ""version-git-tag"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""argv"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-commit-hooks"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-git-message"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-tag-prefix"". This will stop working in the next major version of npm.
+
+> @keystone/api@1.0.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 /Users/zernach/code/gt-school/backend/services/api
+
+ ❯ tests/integration/e2e.integration.test.ts (11 tests | 1 failed) 792ms
+   ❯ live Compose vertical contract (11)
+     ✓ reports process, database, queue, and all source adapters ready 20ms
+     ✓ enforces client and per-job trigger authentication 12ms
+     ✓ rejects malformed, invalid, and oversized fixture payloads with documented 4xx responses 13ms
+     ✓ ingests exactly 120,000 source records and detects the 3,050-item golden set 16ms
+     ✓ returns the committed hand-checked cross-source entity view 67ms
+     ✓ filters conflict data and returns field lineage without exposing a broad query scope  444ms
+     ✓ creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror 185ms
+     × runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged 14ms
+     ✓ does not let viewer scope decide a proposal 8ms
+     ✓ returns the same durable job for a repeated idempotency key 7ms
+     ✓ degrades a real 5xx source to a structured partial run without hanging 5ms
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/e2e.integration.test.ts > live Compose vertical contract > runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged
+AssertionError: expected 1800 to be 3050 // Object.is equality
+
+- Expected
++ Received
+
+- 3050
++ 1800
+
+ ❯ tests/integration/e2e.integration.test.ts:241:50
+    239|     expect(autoApply.sourceMirrorHashAfter).toBe(autoApp…
+    240|     expect(autoApply.sensitiveDenied).toBeGreaterThan(0);
+    241|     expect(autoApply.applied + autoApply.denied).toBe(30…
+       |                                                  ^
+    242|
+    243|     const groups = await request<Array<{ id: string; lab…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  15:41:04
+   Duration  911ms (transform 21ms, setup 0ms, import 48ms, tests 792ms, environment 0ms)
+
+npm error Lifecycle script `test:integration` failed with error:
+npm error code 1
+npm error path /Users/zernach/code/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error location /Users/zernach/code/gt-school/backend/services/api
+npm error command failed
+npm error command sh -c vitest run tests/integration
+Cloudflare demo release stopped: release command failed with exit status 1
+Worker: gt-school-demo-api; uploaded version: not-deployed; Pages project: gt-school; uploaded deployment: not-deployed; source SHA: 3907c486fcdf75c170cc32a603aad55e7afdf280.
+If the Worker upload completed, immediately restore its preceding active version with:
+  (cd ""/Users/zernach/code/gt-school/backend/cloudflare"" && npx --no-install wrangler rollback --name ""gt-school-demo-api"" --message ""manual rollback after failed gt-school demo release"")
+If the Pages upload completed, use Workers & Pages > gt-school > Deployments > the prior production deployment > Rollback to this deployment. Pages Direct Upload has no Wrangler rollback command.
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-26T16:11:43-04:00,unavailable,301
