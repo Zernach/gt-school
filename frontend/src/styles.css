@@ -89,6 +89,7 @@ th small, td small { display: block; margin-top: 0.2rem; }
 .pagination { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.8rem; }
 .loading-panel, .error-panel, .empty-state { display: grid; place-items: center; gap: 0.65rem; min-height: 180px; padding: 1.5rem; border: 1px dashed var(--color-border); border-radius: 0.75rem; text-align: center; background: rgba(7, 11, 20, 0.35); }
 .inline-loading { min-height: 130px; }
+.bootstrap-loading { min-height: min(54vh, 520px); margin-bottom: 1.25rem; }
 .loading-panel p, .error-panel p, .empty-state p { max-width: 55ch; margin: 0; color: var(--color-text-secondary); }
 .error-panel { border-color: rgba(255, 139, 154, 0.52); }
 .spinner { width: 30px; height: 30px; border: 3px solid var(--color-border); border-top-color: var(--color-accent-arctic-cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }

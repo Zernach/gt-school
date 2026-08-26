@@ -98,6 +98,17 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     if (!tenant) { await reply.code(401).send({ error: { code: 'unauthorized', message: 'A valid client key is required.' }, requestId: request.id }); return; }
     request.tenant = tenant;
   };
+  const requireBootstrap = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    if (await readinessSentinelExists(config.READINESS_SENTINEL_PATH)) return;
+    await reply.code(503).send({
+      error: {
+        code: 'bootstrap_in_progress',
+        message: 'The transient demo data is being restored.'
+      },
+      requestId: request.id
+    });
+  };
+  const requireReadyClient = [requireClient, requireBootstrap];
   const requireTrigger = (expected: string) => async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     if (!secretMatches(header(request, 'x-keystone-trigger-secret'), expected)) await reply.code(401).send({ error: { code: 'unauthorized_trigger', message: 'A valid per-job trigger secret is required.' }, requestId: request.id });
   };
@@ -126,7 +137,7 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     }, ready ? 200 : 503);
   });
 
-  app.get('/api/v1/overview', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/overview', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = overviewQuery.parse(request.query);
     return data(reply, request, {
       ...(await getOverview(pool, request.tenant!.tenantId, query.from ? { from: query.from } : {})),
@@ -139,7 +150,7 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
       }
     });
   });
-  app.get('/api/v1/conflicts', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/conflicts', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = listConflictQuery.parse(request.query);
     return data(reply, request, await listConflicts(pool, request.tenant!.tenantId, {
       limit: query.limit,
@@ -152,12 +163,12 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
       ...(query.minimumConfidence === undefined ? {} : { minimumConfidenceBp: Math.round(query.minimumConfidence * 10_000) })
     }));
   });
-  app.get('/api/v1/conflicts/:id', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/conflicts/:id', { preHandler: requireReadyClient }, async (request, reply) => {
     const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
     const detail = await getConflictDetail(pool, request.tenant!.tenantId, id);
     return detail ? data(reply, request, detail) : reply.code(404).send({ error: { code: 'not_found', message: 'Conflict not found.' }, requestId: request.id });
   });
-  app.get('/api/v1/proposals', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/proposals', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = proposalQuery.parse(request.query);
     return data(reply, request, await listProposals(pool, request.tenant!.tenantId, {
       limit: query.limit,
@@ -167,13 +178,13 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
       ...(query.minimumConfidence === undefined ? {} : { minimumConfidenceBp: Math.round(query.minimumConfidence * 10_000) })
     }));
   });
-  app.post('/api/v1/proposals/:id/decision', { preHandler: requireClient }, async (request, reply) => {
+  app.post('/api/v1/proposals/:id/decision', { preHandler: requireReadyClient }, async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const body = decisionBody.parse(request.body);
     const result = await decideProposal(pool, request.tenant!, id, body.decision as ProposalDecision, body.reason, body.version, request.id);
     return result ? data(reply, request, result) : reply.code(404).send({ error: { code: 'not_found', message: 'Proposal not found.' }, requestId: request.id });
   });
-  app.get('/api/v1/entities/:id', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/entities/:id', { preHandler: requireReadyClient }, async (request, reply) => {
     const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
     const entity = await getEntity(pool, request.tenant!.tenantId, id);
     return entity ? data(reply, request, entity) : reply.code(404).send({ error: { code: 'not_found', message: 'Entity not found.' }, requestId: request.id });
@@ -183,11 +194,11 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
     const run = await getRun(pool, request.tenant!.tenantId, id);
     return run ? data(reply, request, run) : reply.code(404).send({ error: { code: 'not_found', message: 'Run not found.' }, requestId: request.id });
   });
-  app.get('/api/v1/incident-groups', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/incident-groups', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).parse(request.query);
     return data(reply, request, await listIncidentGroups(pool, request.tenant!.tenantId, query.limit));
   });
-  app.get('/api/v1/tickets', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/tickets', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = ticketQuery.parse(request.query);
     return data(reply, request, await listTickets(pool, request.tenant!.tenantId, {
       limit: query.limit,
@@ -195,11 +206,11 @@ export async function buildApp(dependencies: AppDependencies): Promise<FastifyIn
       ...(query.status ? { status: query.status } : {})
     }));
   });
-  app.get('/api/v1/applications', { preHandler: requireClient }, async (request, reply) => {
+  app.get('/api/v1/applications', { preHandler: requireReadyClient }, async (request, reply) => {
     const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).parse(request.query);
     return data(reply, request, await listProposalApplications(pool, request.tenant!.tenantId, query.limit));
   });
-  app.post('/api/v1/proposals/:id/rollback', { preHandler: requireClient }, async (request, reply) => {
+  app.post('/api/v1/proposals/:id/rollback', { preHandler: requireReadyClient }, async (request, reply) => {
     if (request.tenant!.role !== 'reviewer') throw new Error('reviewer_required');
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const result = await rollbackAutoApply(pool, config, {

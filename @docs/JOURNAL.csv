@@ -71,3 +71,5 @@ Implement REQUIREMENTS stretch goals 7-10 end-to-end,"Plan & implement end-to-en
 
 @REQUIREMENTS.md (67-72) ",2026-08-24T21:03:20-04:00,unavailable,1460
 Add start.sh Deploy target menu,the @scripts/start.sh needs option for deploy: and user can choose frontend or backend or both,2026-08-24T22:21:37-04:00,unavailable,277
+Match Keystone browser tab favicon to gt.school,the keystone ico icon in the browser tab should use the same ico icon image that https://www.gt.school,2026-08-26T15:27:57-0400,unavailable,unavailable
+Hardened transient backend restoration,"due to the nature of our transient back-end, if a user does not open the website within a certain number of hours, then the back-end resets, and the next user sees an empty frontend with all zeros everywhere. we need to make this more resilient, where if the user comes to an empty back-end, it must automatically trigger repopulation QUICKLY, and the frontend needs appropriate loading indicator(s)",2026-08-26T15:35:40-04:00,unavailable,537

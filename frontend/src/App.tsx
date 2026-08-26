@@ -10,12 +10,18 @@ import { TicketTable } from './components/TicketTable';
 import type { ConflictDetail as ConflictDetailType, ConflictFilters, ConflictList, ExtractedTicket, IncidentGroup, OverviewData, Proposal } from './types';
 
 interface LoadState<T> { loading: boolean; data: T | null; error: string; }
+type BootstrapPhase = 'checking' | 'restoring' | 'open';
 const loading = <T,>(): LoadState<T> => ({ loading: true, data: null, error: '' });
+const bootstrapRetryMs = 1_000;
 
 function failureMessage(error: unknown): string {
   if (error instanceof DOMException && error.name === 'AbortError') return '';
   if (error instanceof ApiError) return `${error.message}${error.requestId ? ` Request ${error.requestId}.` : ''}`;
   return error instanceof Error ? error.message : 'The dashboard could not load this evidence window.';
+}
+
+function isTransientBootstrap(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 503 && (error.code === 'bootstrap_in_progress' || error.code === 'backend_unavailable');
 }
 
 export default function App() {
@@ -33,37 +39,58 @@ export default function App() {
   const [detail, setDetail] = useState<LoadState<ConflictDetailType>>({ loading: false, data: null, error: '' });
   const [refresh, setRefresh] = useState(0);
   const [announcement, setAnnouncement] = useState('');
+  const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>('checking');
   const selectedTriggerId = useRef<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    void getOverview(controller.signal, filters.from).then((data) => setOverview({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setOverview({ loading: false, data: null, error: message }); });
-    return () => controller.abort();
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    void getOverview(controller.signal, filters.from).then((data) => {
+      setOverview({ loading: false, data, error: '' });
+      setBootstrapPhase('open');
+    }).catch((error: unknown) => {
+      if (isTransientBootstrap(error)) {
+        setBootstrapPhase('restoring');
+        retryTimer = setTimeout(() => setRefresh((value) => value + 1), bootstrapRetryMs);
+        return;
+      }
+      const message = failureMessage(error);
+      if (message) setOverview({ loading: false, data: null, error: message });
+      setBootstrapPhase('open');
+    });
+    return () => {
+      controller.abort();
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [refresh, filters.from]);
 
   useEffect(() => {
+    if (bootstrapPhase !== 'open') return;
     const controller = new AbortController();
     void getConflicts(filters, cursor, controller.signal).then((data) => setConflicts({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setConflicts({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [filters, cursor, refresh]);
+  }, [filters, cursor, refresh, bootstrapPhase]);
 
   useEffect(() => {
+    if (bootstrapPhase !== 'open') return;
     const controller = new AbortController();
     void getProposals(proposalStatus, controller.signal, { type: proposalType, source: proposalSource }).then((data) => setProposals({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setProposals({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [proposalStatus, proposalType, proposalSource, refresh]);
+  }, [proposalStatus, proposalType, proposalSource, refresh, bootstrapPhase]);
 
   useEffect(() => {
+    if (bootstrapPhase !== 'open') return;
     const controller = new AbortController();
     void getIncidentGroups(controller.signal).then((data) => setGroups({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setGroups({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [refresh]);
+  }, [refresh, bootstrapPhase]);
 
   useEffect(() => {
+    if (bootstrapPhase !== 'open') return;
     const controller = new AbortController();
     void getTickets(controller.signal).then((data) => setTickets({ loading: false, data, error: '' })).catch((error: unknown) => { const message = failureMessage(error); if (message) setTickets({ loading: false, data: null, error: message }); });
     return () => controller.abort();
-  }, [refresh]);
+  }, [refresh, bootstrapPhase]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -79,6 +106,7 @@ export default function App() {
     setProposals(loading());
     setGroups(loading());
     setTickets(loading());
+    setBootstrapPhase('checking');
     if (selectedId) setDetail(loading());
     setRefresh((value) => value + 1);
   };
@@ -100,9 +128,10 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="site-header"><div className="brand-mark" aria-hidden="true">K</div><div><p>Reconciliation trust layer</p><h1>Keystone</h1></div><div className="header-state"><StatusBadge status={overview.error ? 'failed' : overview.loading ? 'pending' : 'complete'} label={overview.error ? 'API unavailable' : overview.loading ? 'Refreshing evidence' : 'Evidence connected'} /></div></header>
+      <header className="site-header"><div className="brand-mark" aria-hidden="true">K</div><div><p>Reconciliation trust layer</p><h1>Keystone</h1></div><div className="header-state"><StatusBadge status={overview.error ? 'failed' : bootstrapPhase !== 'open' || overview.loading ? 'pending' : 'complete'} label={overview.error ? 'API unavailable' : bootstrapPhase === 'restoring' ? 'Restoring demo data' : bootstrapPhase === 'checking' ? 'Starting backend' : overview.loading ? 'Refreshing evidence' : 'Evidence connected'} /></div></header>
       <main id="main-content">
         <p className="sr-only" aria-live="polite">{announcement}</p>
+        {bootstrapPhase !== 'open' ? <section className="loading-panel bootstrap-loading" role="status" aria-live="polite" aria-busy="true"><span className="spinner" aria-hidden="true" /><h2>{bootstrapPhase === 'restoring' ? 'Restoring demo data' : 'Starting demo backend'}</h2><p>{bootstrapPhase === 'restoring' ? 'The transient backend reset, so Keystone is rebuilding its canonical synthetic evidence. This page will refresh automatically.' : 'Connecting to the transient backend and checking its evidence baseline…'}</p></section> : <>
         {partialSources.length ? <div className="warning-banner" role="status"><span aria-hidden="true">△</span><div><strong>Incomplete source evidence</strong><p>{partialSources.join(', ')} did not complete. Dependent rules are unchecked; absence has not been inferred.</p></div></div> : null}
         {overview.loading ? <section className="loading-panel" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading current source and invariant evidence…</p></section> : overview.error ? <section className="error-panel" role="alert"><h2>Overview unavailable</h2><p>{overview.error}</p><button className="primary-button" type="button" onClick={retry}>Retry overview</button></section> : overview.data ? <Overview overview={overview.data} /> : null}
 
@@ -115,6 +144,7 @@ export default function App() {
         {proposals.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading proposal queue…</p></section> : proposals.error ? <section className="error-panel" role="alert"><h2>Proposal queue unavailable</h2><p>{proposals.error}</p><button type="button" className="primary-button" onClick={retry}>Retry queue</button></section> : proposals.data ? <ProposalQueue proposals={proposals.data} status={proposalStatus} type={proposalType} source={proposalSource} onStatus={changeProposalStatus} onType={changeProposalType} onSource={changeProposalSource} onConflict={selectConflict} /> : null}
         {groups.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading incident groups…</p></section> : groups.error ? <section className="error-panel" role="alert"><h2>Incident groups unavailable</h2><p>{groups.error}</p><button type="button" className="primary-button" onClick={retry}>Retry groups</button></section> : groups.data ? <IncidentGroups groups={groups.data} /> : null}
         {tickets.loading ? <section className="loading-panel inline-loading" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading extracted tickets…</p></section> : tickets.error ? <section className="error-panel" role="alert"><h2>Tickets unavailable</h2><p>{tickets.error}</p><button type="button" className="primary-button" onClick={retry}>Retry tickets</button></section> : tickets.data ? <TicketTable tickets={tickets.data} /> : null}
+        </>}
       </main>
       {selectedId ? detail.loading ? <div className="detail-panel loading-panel" role="dialog" aria-label="Loading conflict detail" aria-modal="true" aria-busy="true"><span className="spinner" aria-hidden="true" /><p>Loading lineage and audit evidence…</p><button type="button" className="secondary-button" onClick={closeDetail}>Close</button></div> : detail.error ? <div className="detail-panel error-panel" role="dialog" aria-modal="true" aria-labelledby="detail-error-heading"><h2 id="detail-error-heading">Conflict detail unavailable</h2><p>{detail.error}</p><button type="button" className="primary-button" onClick={retry}>Retry detail</button><button type="button" className="secondary-button" onClick={closeDetail}>Close</button></div> : detail.data ? <ConflictDetail detail={detail.data} onClose={closeDetail} onDecided={decided} /> : null : null}
       <footer><p>Proposals stay pending by default. Auto-apply is a separate gated function. Synthetic fixtures · no source writer.</p></footer>

@@ -19,6 +19,8 @@ Cloudflare Workers Paid with Containers entitlement is required. This demo inten
 
 The Container has no external internet egress. PostgreSQL and Redis bind `127.0.0.1`; Fastify alone listens on 8080 for Cloudflare ingress. `/health` covers API dependencies. `/ready` also requires the bootstrap sentinel, which the entrypoint writes after migrations, source fixture initialization, worker health, sync, and reconcile complete. A partial startup exits with bounded diagnostics rather than serving an incomplete baseline.
 
+The first dashboard overview request also wakes a stopped Container. Evidence routes fail closed with `503 bootstrap_in_progress` until the sentinel exists, preventing a listening-but-empty database from appearing as valid zeroes. The frontend treats that response, and the ingress's bounded startup `503`, as a restoration state: it shows a live loading panel and retries the overview every second. Once the baseline is ready, the remaining evidence views load normally.
+
 ## One-time Pages bootstrap
 
 The scripts always authenticate through the shared zprofile non-VPN Wrangler runner (`$HOME/code/zprofile/zprofile-run-function.zsh`). That runner routes Cloudflare API, OAuth challenge, and registry traffic outside the VPN, so persisted Wrangler OAuth can be used without a `CLOUDFLARE_API_TOKEN`. Create the Direct Upload Pages project once from a clean `main` checkout:

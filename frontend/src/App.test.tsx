@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import App from './App';
@@ -112,15 +112,29 @@ describe('dashboard shell', () => {
 });
 
 describe('dashboard loading states', () => {
-  it('renders distinct loading states while each evidence request is pending', () => {
+  it('shows one startup gate before requesting the remaining evidence surfaces', () => {
     mockedGetOverview.mockReturnValue(new Promise(() => undefined));
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     mockedGetProposals.mockReturnValue(new Promise(() => undefined));
     mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
     mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
-    expect(screen.getByText('Refreshing evidence')).toBeInTheDocument();
-    expect(screen.getByText('Loading current source and invariant evidence…')).toBeInTheDocument();
+    expect(screen.getByText('Starting backend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Starting demo backend' })).toBeInTheDocument();
+    expect(screen.getByText('Connecting to the transient backend and checking its evidence baseline…').closest('[aria-busy="true"]')).toBeInTheDocument();
+    expect(mockedGetConflicts).not.toHaveBeenCalled();
+    expect(mockedGetProposals).not.toHaveBeenCalled();
+    expect(mockedGetIncidentGroups).not.toHaveBeenCalled();
+    expect(mockedGetTickets).not.toHaveBeenCalled();
+  });
+
+  it('renders distinct loading states once the baseline is ready and evidence requests are pending', async () => {
+    mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
+    mockedGetProposals.mockReturnValue(new Promise(() => undefined));
+    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
+    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Trust overview' });
     expect(screen.getByText('Checking this evidence window…')).toBeInTheDocument();
     expect(screen.getByText('Loading proposal queue…')).toBeInTheDocument();
     expect(screen.getByText('Loading incident groups…')).toBeInTheDocument();
@@ -128,23 +142,37 @@ describe('dashboard loading states', () => {
     expect(screen.getAllByText(/Loading|Checking/u).every((element) => element.closest('[aria-busy="true"]') !== null)).toBe(true);
   });
 
-  it('disables refresh while conflict evidence is loading', () => {
-    mockedGetOverview.mockReturnValue(new Promise(() => undefined));
+  it('automatically retries while the transient backend restores its baseline', async () => {
+    vi.useFakeTimers();
+    try {
+      mockedGetOverview
+        .mockRejectedValueOnce(new ApiError(503, 'bootstrap_in_progress', 'The transient demo data is being restored.'))
+        .mockResolvedValueOnce(overviewFixture());
+      render(<App />);
+      await act(async () => Promise.resolve());
+      expect(screen.getByRole('heading', { name: 'Restoring demo data' })).toBeInTheDocument();
+      expect(screen.getByText(/This page will refresh automatically/u)).toBeInTheDocument();
+      expect(mockedGetConflicts).not.toHaveBeenCalled();
+
+      await act(async () => vi.advanceTimersByTimeAsync(1_000));
+      expect(mockedGetOverview).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('disables refresh while conflict evidence is loading', async () => {
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
-    mockedGetProposals.mockReturnValue(new Promise(() => undefined));
-    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
-    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
+    await screen.findByRole('heading', { name: 'Trust overview' });
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
   });
 
-  it('disables conflict filters while conflict evidence is loading', () => {
-    mockedGetOverview.mockReturnValue(new Promise(() => undefined));
+  it('disables conflict filters while conflict evidence is loading', async () => {
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
-    mockedGetProposals.mockReturnValue(new Promise(() => undefined));
-    mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
-    mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
+    await screen.findByRole('heading', { name: 'Trust overview' });
     expect(screen.getByRole('group', { name: 'Filter conflicts' })).toBeDisabled();
   });
 

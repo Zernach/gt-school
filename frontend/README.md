@@ -10,6 +10,7 @@ The React/Vite dashboard is a human review surface, not a source editor. It pres
 - Minimum 44px controls, visible focus, WCAG AA contrast, reduced-motion support, and internal table scrolling.
 - The conflict detail is a labelled modal with initial focus, Escape close, a focus trap, and trigger-focus restoration.
 - Every data surface has loading, empty, error, success, and partial-evidence behavior. Partial evidence is never rendered as clean.
+- The first overview read wakes the transient demo backend. While its canonical baseline is rebuilding, the dashboard shows one live restoration state and retries automatically instead of rendering startup zeroes.
 - Layout is verified at 1440px desktop and an iPhone-sized narrow viewport.
 
 The production nginx image is unprivileged and serves a strict CSP, `nosniff`, `DENY` framing, and `no-referrer`. `/api` is proxied to the API over internal Compose DNS so the browser uses one origin. TLS must be terminated by deployment ingress; local Compose intentionally uses loopback HTTP.
