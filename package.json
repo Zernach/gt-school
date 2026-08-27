@@ -39,6 +39,7 @@
     "deploy:cloudflare-demo": "bash scripts/deploy_cloudflare_demo.sh",
     "benchmark": "npm run benchmark --workspace @keystone/api --",
     "compose:config": "./backend/docker/compose.sh config --quiet",
+    "compose:up:backend": "./backend/docker/compose.sh up --build --wait postgres queue init api worker",
     "compose:up": "./backend/docker/compose.sh up --build --wait"
   },
   "devDependencies": {

@@ -161,11 +161,15 @@ backend_log="$tmp_dir/backend.log"
 GT_SCHOOL_TEST_LOG="$backend_log" run_release backend >/dev/null
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler deploy --tag=$source_sha --message=gt-school demo $source_sha" "$backend_log"
 grep -q "npm run verify:cloudflare-demo --workspace @keystone/api --" "$backend_log"
+grep -q "npm run compose:up:backend" "$backend_log"
 if grep -q 'pages deploy' "$backend_log"; then
   echo "backend release must not upload Pages" >&2
   exit 1
 fi
-[[ "$(grep -c 'npm run test:e2e' "$backend_log")" == 1 ]] || { echo "backend release must keep local e2e only" >&2; exit 1; }
+if grep -q 'npm run test:e2e' "$backend_log"; then
+  echo "backend release must not require the frontend browser test" >&2
+  exit 1
+fi
 
 wrapper_log="$tmp_dir/frontend-wrapper.log"
 GT_SCHOOL_TEST_LOG="$wrapper_log" \

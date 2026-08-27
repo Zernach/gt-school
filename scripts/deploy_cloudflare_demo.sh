@@ -183,14 +183,20 @@ npm run test:cloudflare
 npm run test:deploy
 npm run dry-run --workspace @keystone/cloudflare-ingress
 npm run test:cloudflare-image
-npm run compose:up
+if [[ "$DEPLOY_TARGET" == backend ]]; then
+  npm run compose:up:backend
+else
+  npm run compose:up
+fi
 npm run test:security
 npm run test:worker-recovery
 npm run test:integration
 npm run suite
 npm run test:spend-cap
 npm run benchmark
-npm run test:e2e
+if [[ "$DEPLOY_TARGET" != backend ]]; then
+  npm run test:e2e
+fi
 
 if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
   echo "Preflighting Wrangler authentication"
