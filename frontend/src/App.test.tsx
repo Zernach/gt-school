@@ -180,7 +180,7 @@ describe('dashboard loading states', () => {
       render(<App />);
       await act(async () => Promise.resolve());
       expect(screen.getByRole('heading', { name: 'Restoring demo data' })).toBeInTheDocument();
-      expect(screen.getByText(/This page will refresh automatically/u)).toBeInTheDocument();
+      expect(screen.getByText(/up to 2 minutes.*One moment, please.*page will refresh automatically/u)).toBeInTheDocument();
       expect(mockedGetConflicts).not.toHaveBeenCalled();
 
       await act(async () => vi.advanceTimersByTimeAsync(1_000));

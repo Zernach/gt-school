@@ -42,6 +42,27 @@ interface ConflictRow {
   evidence: Record<string, unknown>;
 }
 
+const PROVIDER_WORK_CONCURRENCY = 8;
+
+interface ReservedConflict {
+  row: ConflictRow;
+  conflict: DetectedConflict;
+  action: ReturnType<typeof candidateAction>;
+  reservationId: string;
+}
+
+async function forEachConcurrent<T>(items: readonly T[], concurrency: number, worker: (item: T) => Promise<void>): Promise<void> {
+  let nextIndex = 0;
+  const workerCount = Math.min(items.length, concurrency);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      if (item) await worker(item);
+    }
+  }));
+}
+
 async function sourceMirrorHash(pool: DatabasePool, tenantId: string): Promise<string> {
   const result = await pool.query<{ payload_hash: string }>(`SELECT records.payload_hash FROM source_records records
     JOIN active_snapshots active ON active.snapshot_id = records.snapshot_id AND active.tenant_id = records.tenant_id
@@ -68,6 +89,7 @@ export async function reconcileConflicts(pool: DatabasePool, config: AppConfig, 
     let proposalsDeduplicated = 0;
     let providerCalls = 0;
     let haltReason: string | undefined;
+    const reserved: ReservedConflict[] = [];
     for (const row of conflicts.rows) {
       const conflict: DetectedConflict = { ...row };
       const action = candidateAction(conflict);
@@ -87,6 +109,9 @@ export async function reconcileConflicts(pool: DatabasePool, config: AppConfig, 
       }
       const reservationId = reservation.reservationId;
       if (!reservationId) throw new Error('spend_reservation_id_missing');
+      reserved.push({ row, conflict, action, reservationId });
+    }
+    await forEachConcurrent(reserved, PROVIDER_WORK_CONCURRENCY, async ({ row, conflict, action, reservationId }) => {
       await markProviderCallStarted(pool, reservationId);
       let output;
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -101,7 +126,7 @@ export async function reconcileConflicts(pool: DatabasePool, config: AppConfig, 
         const metadata = redactMetadata({ conflictKey: conflict.conflict_key, error: error instanceof Error ? error.message : 'provider_invalid' }, config.LOG_PRIVACY_MODE);
         await pool.query(`INSERT INTO audit_events(id, tenant_id, event_type, actor, request_id, object_type, object_id, metadata, event_hash)
           VALUES ($1, $2, 'proposal_generation_failed', 'worker', $3, 'conflict', $4, $5::jsonb, $6)`, [randomUUID(), request.tenantId, request.requestId, conflict.conflict_key, JSON.stringify(metadata), sha256(stableStringify(metadata))]);
-        continue;
+        return;
       } finally {
         if (timer) clearTimeout(timer);
       }
@@ -118,7 +143,7 @@ export async function reconcileConflicts(pool: DatabasePool, config: AppConfig, 
           VALUES ($1, $2, 'proposal_created', 'worker', $3, 'proposal', $4, $5::jsonb, $6)`, [randomUUID(), request.tenantId, request.requestId, proposalId, JSON.stringify(auditMetadata), sha256(stableStringify(auditMetadata))]);
         proposalsCreated += 1;
       });
-    }
+    });
     const after = await sourceMirrorHash(pool, request.tenantId);
     if (before !== after) throw new Error('source_mirror_changed_during_reconciliation');
     return {

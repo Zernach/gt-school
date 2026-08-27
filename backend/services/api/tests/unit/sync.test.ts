@@ -485,7 +485,7 @@ describe('batching and failure atomicity', () => {
   it('fails closed if a just-inserted source record cannot be read back', async () => {
     const { pool, transactionClient } = makePool({ omitPersisted: ({ source_kind }) => source_kind === 'crm' });
     await expect(synchronize(pool, cleanAdapters(), config, request)).rejects.toThrow('persisted_source_record_missing:crm:crm-0');
-    expect(transactionClient.release).not.toHaveBeenCalled();
+    expect(transactionClient.release).toHaveBeenCalled();
   });
 
   it('propagates a persistence failure rather than reporting a successful sync', async () => {

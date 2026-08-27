@@ -1,0 +1,4 @@
+interface:
+  display_name: "Debug Remote Git Workflows"
+  short_description: "Fetch latest CI and fix local failures"
+  default_prompt: "Use $debug-remote-git-workflows to fetch .github/workflows/ci.yml for the latest repository commit and fix actionable failures locally."

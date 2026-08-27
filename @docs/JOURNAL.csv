@@ -715,3 +715,8 @@ Connect each request to its student, household, source record, and conflict so s
 ✓
 50 extracted",2026-08-27T17:00:48-0400,unavailable,unavailable
 Created GitHub latest-commit skill,"create a reusable skill that can be called to fetch github cli for most recent commit to repo. if errors, fix them and i will review. if no errors, do nothing.",2026-08-27T17:00:55-0400,unavailable,unavailable
+Fetched GitHub CI and repaired performance failures,"create a reusable skill that can be called to fetch github ci for most recent commit to repo. if errors, fix them and i will review. if no errors, do nothing. .github/workflows/ci.yml",2026-08-27T17:33:10-04:00,unavailable,unavailable
+Updated transient-backend restoration copy,"this text should mention it can take up to 2 minutes to rebuild the transient backend for this demo, one moment please
+
+Restoring demo data
+The transient backend reset, so Keystone is rebuilding its canonical synthetic evidence. This page will refresh automatically.",2026-08-27T17:34:10-0400,unavailable,unavailable
