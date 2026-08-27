@@ -8,44 +8,44 @@ Deliver the opening line above on camera. Then switch to a full-screen screen sh
 
 Estimated delivery: 2–3 minutes at a conversational pace.
 
-## Screen 1 — First up: the evidence
+## Screen 1 — Start with a trustworthy window
 
-On screen: Open the Keystone dashboard and let the evidence window load.
+On screen: Open the Keystone dashboard and pause on the loading, restoring, or connected state. Leave the synthetic-data note visible.
 
-Voiceover: “First up: the evidence window. This demo uses synthetic fixtures, so no real student or family data is involved. If the backend is waking or rebuilding, the screen says so and tries again. No suspicious little zeroes while the data puts on its shoes. Once it’s ready, we begin.”
+Voiceover: “First, the overview answers the question before every other question: can I trust this window? If evidence is restoring, the screen says so and retries. No suspicious little zeroes while the data puts on its shoes—zero is a number, not reassurance. Once open, we have an honest place to begin.”
 
-## Screen 2 — Cue card: what is ready
+## Screen 2 — Know where to begin
 
-On screen: Show the evidence window, latest sync, source snapshots, trust status, and key metrics.
+On screen: Show the scope, latest sync, source snapshots, trust posture, next-best-action card, metric cards, and source freshness strip.
 
-Voiceover: “Here’s the cue card: latest sync, three snapshots, rule coverage, conflicts, pending proposals, and spend. It keeps the big boundary visible too: source writes are zero. A pending proposal is a note, not a fix. Auto-apply, if shown, is reversible Keystone state—not a quiet edit in a source system.”
+Voiceover: “This is the map, not a scoreboard. Scope, freshness, snapshots, rule coverage, conflicts, pending review, and spend sit together. Trust posture tells us whether to proceed, pause, or investigate; next-best action gives us the next click. ‘Source writes: zero’ keeps the helpful boundary visible: review here, repair elsewhere.”
 
-## Screen 3 — Bring out the disagreement
+## Screen 3 — Find the disagreement
 
-On screen: Open “Find the conflicts,” select “Active failures,” and briefly show the filters.
+On screen: Open “Find the conflicts,” select “Active failures,” and show the shortcuts and filters.
 
-Voiceover: “Now we bring out the disagreement. These are repeatable rules, not guesses in fancy trousers. Filter by issue, source, status, proposal state, or confidence. If a source was unavailable, we see Evidence gaps. Unchecked isn’t clean; the checker simply couldn’t peek.”
+Voiceover: “Now we narrow the search. Shortcuts jump to active failures, pending review, or evidence gaps; filters ask a sharper question by issue, source, status, proposal state, or confidence. Evidence gaps are useful because they show what we do not know. ‘Unchecked’ is not ‘clean.’”
 
-## Screen 4 — Close-up on the paper trail
+## Screen 4 — Make one conflict explain itself
 
-On screen: Open one conflict and scroll through invariant evidence, the proposal, lineage, and audit history.
+On screen: Open one conflict and scroll through invariant evidence, the guarded proposal, lineage, and audit history.
 
-Voiceover: “Close-up, please. Pick a row and follow the paper trail: rule, records, raw and normalized values, plus breadcrumbs back to the source. The proposal says what it suggests and why. Confidence is a signal, not a fortune cookie; missing or conflicting evidence lowers it. Sensitive fields get a hard hold.”
+Voiceover: “This is where a red badge becomes a reason. Compare the rule, records, exact values, and source lineage. The proposal shows what it suggests and why. Confidence is a clue, not a crystal ball. When a sensitive field is involved, the hard hold is visible before anyone acts.”
 
-## Screen 5 — Audience participation: decide
+## Screen 5 — Make a guarded call
 
 On screen: Show Approve, Reject, Hold, the reason field, and confirmation. Choose Hold for the walkthrough.
 
-Voiceover: “Now for audience participation—approve, reject, or hold. I’ll choose Hold; sometimes the safest answer is, ‘Not yet.’ Every decision needs a reason and confirmation. Keystone records the choice and audit trail; source systems stay unchanged.”
+Voiceover: “Now the reviewer gets the steering wheel: approve, reject, or hold. I’ll choose Hold, because ‘not yet’ is a legitimate result. A reason and confirmation make the choice legible to the next reviewer; the status and audit history keep the decision on screen. Source systems remain unchanged.”
 
-## Screen 6 — The bigger pattern
+## Screen 6 — See patterns, then add context
 
-On screen: Briefly show “See the bigger pattern” and “Add support context.”
+On screen: Briefly show “See the bigger pattern,” including the suggested starting point, then “Add support context,” including ticket references and the review link.
 
-Voiceover: “For the final segment, one puzzle becomes the whole pile. Related failures become patterns, giving us a sensible place to start. Support requests can link to a student, household, source record, and conflict. Missing references stay missing. No mystery links.”
+Voiceover: “The pattern view zooms out and ranks related failures, so we can start with the biggest workstream without treating volume as a verdict. The support view adds requested action, owner, source record, and conflict links. Missing references stay visible—not mystery links. One helps prioritize; the other connects a request to evidence.”
 
-## Close — Roll credits, keep the trail
+## Close — Keep the trail
 
 On screen: Return to the overview or leave “Synthetic fixtures · no source writer” visible.
 
-Voiceover: “And that’s tonight’s little rhyme: read it, check it, trace it, decide—and keep source systems on the other side. This is a synthetic demo, not a production claim. What it shows today is a calmer review: evidence in view, uncertainty marked honestly, and a person in the loop. No mystery links, no confetti cannon, just one useful question: does a reviewer have enough context for the next safe call?”
+Voiceover: “That is the chain: don’t mistake loading for empty, a flag for an explanation, or a suggestion for a decision. Evidence, context, and the next step stay together, with uncertainty marked honestly. A calmer review—not because uncertainty vanished, but because it has somewhere useful to go.”
