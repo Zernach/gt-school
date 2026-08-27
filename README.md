@@ -41,9 +41,19 @@ npm run compose:up
 npm run suite
 ```
 
-`npm start` → **Deploy** chooses frontend (Pages), backend (Worker/Container), or both. Those releases still require a clean, pushed `main` commit; see [@docs/CLOUDFLARE_DEMO.md](@docs/CLOUDFLARE_DEMO.md).
+`npm start` → **Start stack** starts only the backend Compose services, waits for
+their health checks, starts the local Vite frontend, and opens it in the default
+browser. **Deploy** chooses frontend (Pages), backend (Worker/Container), or
+both. Those releases still require a clean, pushed `main` commit; see
+[@docs/CLOUDFLARE_DEMO.md](@docs/CLOUDFLARE_DEMO.md).
 
-Open [http://localhost:4173](http://localhost:4173). The local API is [http://localhost:3000](http://localhost:3000). The Compose wrapper creates the ignored `backend/docker/.env` from the runnable, secret-free example when needed.
+The local frontend is [http://localhost:5173](http://localhost:5173), and the
+local API is [http://localhost:3000](http://localhost:3000) by default. Start
+stack honors a configured `API_PORT` when the backend uses a local port
+override. The Compose wrapper creates the ignored `backend/docker/.env` from the
+runnable, secret-free example when needed. Use `npm run compose:up` when you
+explicitly want the complete tracked Compose topology, including the
+production-like frontend container.
 
 ### Fixture credentials
 
@@ -75,6 +85,7 @@ npm run test:integration  # live API, persistence, worker, and source behavior
 npm run test:spend-cap    # concurrent transactional reservation boundary
 npm run test:security     # database privilege and immutability checks
 npm run test:worker-recovery
+npm run test:start
 npm run test:e2e
 npm run lint && npm run typecheck && npm run build
 ```

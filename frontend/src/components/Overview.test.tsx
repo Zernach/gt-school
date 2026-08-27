@@ -6,20 +6,20 @@ import { Overview } from './Overview';
 describe('trust overview', () => {
   it('labels the region and evidence window', () => {
     render(<Overview overview={overviewFixture()} />);
-    expect(screen.getByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
-    expect(screen.getByText('Current evidence window')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start with the evidence' })).toBeInTheDocument();
+    expect(screen.getByText('01 · Orient')).toBeInTheDocument();
   });
 
   it('shows the selected evidence-window start without relying on color', () => {
     render(<Overview overview={overviewFixture({ evidenceWindow: { from: FIXED_TIME } })} />);
-    expect(screen.getByText(`From ${new Date(FIXED_TIME).toLocaleString()}`)).toBeInTheDocument();
+    expect(screen.getByText(`Conflicts and proposals last seen from ${new Date(FIXED_TIME).toLocaleString()}`)).toBeInTheDocument();
   });
 
   it('renders active conflicts with thousands separators', () => {
     render(<Overview overview={overviewFixture()} />);
     const card = screen.getByText('Active conflicts').closest('article')!;
     expect(within(card).getByText('3,050')).toBeInTheDocument();
-    expect(within(card).getByText('deterministic failures')).toBeInTheDocument();
+    expect(within(card).getByText('3,049 proposals awaiting review · 25 resolved')).toBeInTheDocument();
   });
 
   it('finds the pending queue count regardless of proposal order', () => {
@@ -27,7 +27,7 @@ describe('trust overview', () => {
     render(<Overview overview={overview} />);
     const card = screen.getByText('Pending review').closest('article')!;
     expect(within(card).getByText('42')).toBeInTheDocument();
-    expect(within(card).getByText('source writes: zero')).toBeInTheDocument();
+    expect(within(card).getByText('0 held · source writes: zero')).toBeInTheDocument();
   });
 
   it('shows zero when there is no pending proposal group', () => {
@@ -45,14 +45,14 @@ describe('trust overview', () => {
       }
     });
     render(<Overview overview={overview} />);
-    const card = screen.getByText('Unchecked rules').closest('article')!;
-    expect(within(card).getByText('17')).toBeInTheDocument();
-    expect(within(card).getByText('never counted as pass')).toBeInTheDocument();
+    const card = screen.getByText('Evidence coverage').closest('article')!;
+    expect(within(card).getByText('Latest run · 102 of 119 checked · 2 failures · 17 unavailable')).toBeInTheDocument();
+    expect(within(card).getByText('85.7%')).toBeInTheDocument();
   });
 
   it('shows zero unchecked rules before any invariant run', () => {
     render(<Overview overview={overviewFixture({ invariant: null })} />);
-    expect(within(screen.getByText('Unchecked rules').closest('article')!).getByText('0')).toBeInTheDocument();
+    expect(within(screen.getByText('Evidence coverage').closest('article')!).getByText('—')).toBeInTheDocument();
   });
 
   it.each([
@@ -64,7 +64,7 @@ describe('trust overview', () => {
     render(<Overview overview={overviewFixture({ spend: { cap_microcents: '500000000', reserved_microcents: actual, actual_microcents: actual, released_microcents: '0' } })} />);
     const card = screen.getByText('Daily spend').closest('article')!;
     expect(within(card).getByText(expected)).toBeInTheDocument();
-    expect(within(card).getByText('cap $5.0000')).toBeInTheDocument();
+    expect(within(card).getByText(/of \$5\.0000 cap/u)).toBeInTheDocument();
   });
 
   it('shows the latest sync status with text and symbol', () => {
@@ -102,7 +102,7 @@ describe('trust overview', () => {
     overview.sources[1]!.status = 'partial';
     render(<Overview overview={overview} />);
     expect(screen.getByText('Partial')).toBeInTheDocument();
-    expect(screen.getByText('△')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getAllByText('△').every((element) => element.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 
   it('renders a defined empty source state', () => {
@@ -119,13 +119,22 @@ describe('trust overview', () => {
 
   it('documents log redaction and retention without color-only state', () => {
     render(<Overview overview={overviewFixture()} />);
-    expect(screen.getByText(/Logs: redacted · retain 30 days/u)).toBeInTheDocument();
+    expect(screen.getByText(/Safety: redacted logs · retain 30 days/u)).toBeInTheDocument();
     expect(screen.getByText(/append-only hashed metadata/u)).toBeInTheDocument();
+  });
+
+  it('turns the evidence state into a reviewer decision brief', () => {
+    render(<Overview overview={overviewFixture()} />);
+    expect(screen.getByRole('heading', { name: 'Ready for guarded review' })).toBeInTheDocument();
+    expect(screen.getByText('Review before approving')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Review 3,049 pending proposals' })).toHaveAttribute('href', '#conflicts-heading');
+    expect(screen.getByText('100.0% checked')).toBeInTheDocument();
+    expect(screen.getByText('3 of 3 complete')).toBeInTheDocument();
   });
 
   it('shows that dashboard figures match the underlying logs', () => {
     render(<Overview overview={overviewFixture()} />);
-    expect(screen.getByText('Figures match ingestion, invariant, and proposal logs')).toBeInTheDocument();
+    expect(screen.getByText('Reconciled')).toBeInTheDocument();
   });
 
   it('surfaces a mismatched evidence window as more than color', () => {

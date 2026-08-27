@@ -2,7 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BACKEND_COMPOSE="$ROOT_DIR/backend/docker/compose.sh"
+BACKEND_COMPOSE="${GT_SCHOOL_BACKEND_COMPOSE:-$ROOT_DIR/backend/docker/compose.sh}"
+FRONTEND_URL="${GT_SCHOOL_FRONTEND_URL:-http://localhost:5173}"
+FRONTEND_LOG_FILE="${GT_SCHOOL_FRONTEND_LOG_FILE:-${TMPDIR:-/tmp}/gt-school-frontend.log}"
+FRONTEND_PID=""
+BACKEND_SERVICES=(postgres queue init api worker)
 MAIN_MENU_ITEMS=("Start stack" "Build" "Verify" "Show status" "Deploy" "Exit")
 DEPLOY_MENU_ITEMS=("Frontend" "Backend" "Both" "Cancel")
 
@@ -113,7 +117,75 @@ start_backend() {
     return 1
   fi
 
-  "$BACKEND_COMPOSE" up --detach --build --wait
+  "$BACKEND_COMPOSE" up --detach --build --wait "${BACKEND_SERVICES[@]}"
+  start_local_frontend
+}
+
+backend_api_port() {
+  local configured_port="${GT_SCHOOL_API_PORT:-${API_PORT:-}}"
+  if [[ -z "$configured_port" && -f "$ROOT_DIR/backend/docker/.env" ]]; then
+    configured_port="$(awk -F= '$1 == "API_PORT" { print $2; exit }' "$ROOT_DIR/backend/docker/.env")"
+  fi
+  if [[ "$configured_port" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$configured_port"
+  else
+    printf '3000'
+  fi
+}
+
+frontend_is_ready() {
+  curl --fail --silent --show-error --max-time 2 "$FRONTEND_URL" >/dev/null 2>&1
+}
+
+open_local_frontend() {
+  if command -v open >/dev/null 2>&1; then
+    if ! open "$FRONTEND_URL" >/dev/null 2>&1; then
+      printf 'Frontend is ready at %s, but the browser could not be opened automatically.\n' "$FRONTEND_URL"
+    fi
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$FRONTEND_URL" >/dev/null 2>&1 &
+  else
+    printf 'Open %s in a browser.\n' "$FRONTEND_URL"
+  fi
+}
+
+start_local_frontend() {
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is required to start the local frontend server"
+    return 1
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl is required to wait for the local frontend server"
+    return 1
+  fi
+
+  if ! frontend_is_ready; then
+    printf 'Starting local frontend server...\n'
+    VITE_API_PROXY_TARGET="${GT_SCHOOL_API_PROXY_TARGET:-http://127.0.0.1:$(backend_api_port)}" \
+      npm --prefix "$ROOT_DIR" run dev --workspace @keystone/frontend >"$FRONTEND_LOG_FILE" 2>&1 &
+    FRONTEND_PID=$!
+
+    local attempt
+    for ((attempt = 1; attempt <= 60; attempt++)); do
+      if frontend_is_ready; then
+        break
+      fi
+      if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+        printf 'Local frontend failed to start; see %s\n' "$FRONTEND_LOG_FILE"
+        return 1
+      fi
+      sleep 0.5
+    done
+
+    if ! frontend_is_ready; then
+      kill "$FRONTEND_PID" 2>/dev/null || true
+      printf 'Local frontend did not become ready at %s; see %s\n' "$FRONTEND_URL" "$FRONTEND_LOG_FILE"
+      return 1
+    fi
+  fi
+
+  printf 'Local frontend ready at %s\n' "$FRONTEND_URL"
+  open_local_frontend
 }
 
 build_project() {

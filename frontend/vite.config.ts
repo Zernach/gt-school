@@ -6,8 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:3000',
-      '/health': 'http://127.0.0.1:3000'
+      '/api': process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:3000',
+      '/health': process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:3000'
     }
   },
   build: { sourcemap: true, target: 'es2022' },

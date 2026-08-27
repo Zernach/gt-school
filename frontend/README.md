@@ -36,4 +36,9 @@ npm run build --workspace @keystone/frontend
 npm run test:e2e
 ```
 
-Vite development proxy defaults to API port 3000; set a compatible local override when using a different host port. The production image receives only the synthetic reviewer key at build time. Do not embed a real credential in a browser build; production authentication is outside this synthetic MVP.
+Vite development proxy defaults to API port 3000; set `VITE_API_PROXY_TARGET`
+when running it manually against a different host port. The root `Start stack`
+flow derives the configured Compose `API_PORT` automatically. The production
+image receives only the synthetic reviewer key at build time. Do not embed a
+real credential in a browser build; production authentication is outside this
+synthetic MVP.

@@ -134,7 +134,7 @@ describe('conflict table', () => {
   it('renders a defined empty state without an empty table shell', () => {
     render(<ConflictTable rows={[]} selectedId={null} onSelect={vi.fn()} />);
     expect(screen.getByRole('heading', { name: 'No matching conflicts' })).toBeInTheDocument();
-    expect(screen.getByText(/Check source freshness/u)).toBeInTheDocument();
+    expect(screen.getByText(/check the invariant run and source freshness/u)).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -145,8 +145,8 @@ describe('conflict table', () => {
 
   it('renders an accessible result table and caption', () => {
     render(<ConflictTable rows={[conflictFixture()]} selectedId={null} onSelect={vi.fn()} />);
-    expect(screen.getByRole('table', { name: 'Cross-source conflicts and proposal status' })).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Conflict', 'Entity', 'Sources', 'Fields', 'Proposal', 'Confidence', 'Seen']);
+    expect(screen.getByRole('table', { name: 'Deterministic rule failures with affected records, source evidence, proposal state, and confidence' })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Rule failure', 'Affected records', 'Evidence sources', 'Disagreement', 'Proposal state', 'Safety signal', 'Last observed']);
   });
 
   it('makes the wide table container keyboard-scrollable', () => {
@@ -157,10 +157,10 @@ describe('conflict table', () => {
   it('shows conflict type, status, first entity, sources, and fields', () => {
     render(<ConflictTable rows={[conflictFixture()]} selectedId={null} onSelect={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Paid But No Deal' })).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Active · review needed')).toBeInTheDocument();
     expect(screen.getByText('student:11111111-1111-4111-8111-111111111111')).toBeInTheDocument();
-    const sources = screen.getByRole('list', { name: 'Sources' });
-    expect(within(sources).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['app', 'crm', 'payments']);
+    const sources = screen.getByRole('list', { name: 'Evidence sources' });
+    expect(within(sources).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['App DB', 'CRM', 'Payments']);
     expect(screen.getByText('crm_deal_id')).toBeInTheDocument();
   });
 
@@ -197,12 +197,12 @@ describe('conflict table', () => {
   });
 
   it.each([
-    [null, 'No proposal', 'status-unchecked'],
-    [0, '0% evidence', 'status-low'],
-    [5000, '50% evidence', 'status-low'],
-    [9499, '95% evidence', 'status-low'],
-    [9500, '95% evidence', 'status-complete'],
-    [10_000, '100% evidence', 'status-complete']
+    [null, 'No proposal yet', 'status-unchecked'],
+    [0, '0% confidence', 'status-low'],
+    [5000, '50% confidence', 'status-low'],
+    [9499, '95% confidence', 'status-low'],
+    [9500, '95% confidence', 'status-complete'],
+    [10_000, '100% confidence', 'status-complete']
   ] as const)('renders confidence %s as %s with threshold class', (confidence, label, className) => {
     render(<ConflictTable rows={[conflictFixture({ confidence_bp: confidence })]} selectedId={null} onSelect={vi.fn()} />);
     const badge = screen.getByText(label);
@@ -212,35 +212,35 @@ describe('conflict table', () => {
 
   it('shows proposal status separately from conflict status', () => {
     render(<ConflictTable rows={[conflictFixture({ status: 'oscillation_hold', proposal_status: 'held' })]} selectedId={null} onSelect={vi.fn()} />);
-    expect(screen.getByText('Oscillation Hold')).toBeInTheDocument();
+    expect(screen.getByText('Held · repeated conflict')).toBeInTheDocument();
     expect(screen.getByText('Held')).toBeInTheDocument();
   });
 
   it('shows an unchecked proposal label when no proposal exists', () => {
     render(<ConflictTable rows={[conflictFixture({ proposal_id: null, proposal_status: null, confidence_bp: null })]} selectedId={null} onSelect={vi.fn()} />);
-    expect(screen.getAllByText('Unchecked')).toHaveLength(1);
-    expect(screen.getByText('No proposal')).toBeInTheDocument();
+    expect(screen.getByText('Not created')).toBeInTheDocument();
+    expect(screen.getByText('No proposal yet')).toBeInTheDocument();
   });
 
   it('stacks conflict and confidence cell content so every column stays left-aligned', () => {
     const { container } = render(<ConflictTable rows={[conflictFixture({ sensitive_hold: true })]} selectedId={null} onSelect={vi.fn()} />);
     const identity = container.querySelector('th[scope="row"] .cell-stack');
-    const confidence = screen.getByText('75% evidence').closest('.cell-stack');
+    const confidence = screen.getByText('75% confidence').closest('.cell-stack');
     expect(identity).toBeTruthy();
     expect(confidence).toBeTruthy();
     expect(identity).toContainElement(screen.getByRole('button', { name: 'Paid But No Deal' }));
-    expect(identity).toContainElement(screen.getByText('Active'));
-    expect(confidence).toContainElement(screen.getByText('Sensitive hold'));
+    expect(identity).toContainElement(screen.getByText('Active · review needed'));
+    expect(confidence).toContainElement(screen.getByText('Sensitive-field hard hold'));
   });
 
   it('shows a textual sensitive hold in addition to status color', () => {
     render(<ConflictTable rows={[conflictFixture({ sensitive_hold: true })]} selectedId={null} onSelect={vi.fn()} />);
-    expect(screen.getByText('Sensitive hold')).toBeInTheDocument();
+    expect(screen.getByText('Sensitive-field hard hold')).toBeInTheDocument();
   });
 
   it('omits the sensitive hold note for ordinary actions', () => {
     render(<ConflictTable rows={[conflictFixture({ sensitive_hold: false })]} selectedId={null} onSelect={vi.fn()} />);
-    expect(screen.queryByText('Sensitive hold')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sensitive-field hard hold')).not.toBeInTheDocument();
   });
 
   it('uses a machine-readable last-seen timestamp', () => {

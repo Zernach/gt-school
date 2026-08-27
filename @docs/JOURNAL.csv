@@ -217,3 +217,95 @@ If the Pages upload completed, use Workers & Pages > gt-school > Deployments > t
 error Command failed with exit code 1.
 info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
 zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-26T16:30:42-04:00,unavailable,264
+Proposal queue columns left-aligned,"all cols should be left aligned, including the % colunn
+
+[Image #1]",2026-08-26T21:43:28-04:00,unavailable,unavailable
+Backend-only Start stack with local Vite handoff,"why is there a frontend image being built? let's simply startup the backend containers/images, and then when ready, start the local frontend server and open in new browser tab when users selects ""Start stack""
+
+=> => exporting manifest list sha256:a7572ab5ba7c31c9fb86c  0.0s
+ => => naming to docker.io/library/keystone-frontend:local   0.0s
+ => => unpacking to docker.io/library/keystone-frontend:loc  0.0s
+ => [frontend] resolving provenance for metadata file        0.0s
+[+] up 8/8
+ ✔ Image keystone-api:local        Built                      3.6s
+ ✔ Image keystone-frontend:local   Built                      3.6s
+ ✔ Container gt-school--postgres-1 Healthy                   15.3s
+ ✔ Container gt-school--queue-1    Healthy                   15.3s
+ ✔ Container gt-school--init-1     Exited                    15.3s
+ ✔ Container gt-school--api-1      Healthy                   15.3s
+ ✔ Container gt-school--worker-1   Healthy                   15.7s
+ ✔ Container gt-school--frontend-1 Healthy                   20.0s
+Project control
+
+> Start stack
+  Build
+  Verify
+  Show status
+  Deploy
+  Exit
+
+Use Up/Down arrows to navigate. Space or Enter selects.",2026-08-26T21:57:55-04:00,unavailable,unavailable
+Rebuilt local backend from clean synthetic volumes and restored the exact evidence baseline,"the following warnings only exist locally, so please rebuild backend locally from scratch to try to resolve
+
+K
+Reconciliation trust layer
+
+Keystone
+✓
+Evidence connected
+△
+Incomplete source evidence
+crm did not complete. Dependent rules are unchecked; absence has not been inferred.
+
+Current evidence window
+
+Trust overview
+△
+Sync partial
+△
+Dashboard figures do not match logs
+ingestion matches active snapshots: 120000 vs 65000; conflicts match invariant fail: 3050 vs 0",2026-08-27T08:32:24-0400,unavailable,302
+Make pgvector incident clusters more useful on home screen,"make this section on the homesreen more useful, insightful, helpful
+
+pgvector cosine clusters
+
+Incident groups
+✓
+14 patterns
+Pattern	Members	Nearest neighbor
+Paid But No Deal	500	incgrp_b224fce31e3c44434ae3be02
+Material Field Disagreement	500	incgrp_8a93bf501f08b58470236931
+Required Source Missing	400	incgrp_b224fce31e3c44434ae3be02
+Duplicate By Email	300	incgrp_8a93bf501f08b58470236931
+Enrolled But Unpaid	300	incgrp_48a770e9272f09be6917d51f
+Cross Source Email Mismatch	250	incgrp_78c42389324bc46bc7815acd
+Payment With No Person	200	incgrp_291af020a6d5dc0fb0c5f03a
+Dropped Sibling	150	incgrp_5a55bbc163ef1680e6ff2400
+Wrong Amount Payment	100	incgrp_b18c6e2919e581ac16531d48
+Stale Crm Pointer	100	incgrp_5a55bbc163ef1680e6ff2400
+Refund Not Reflected	100	incgrp_291af020a6d5dc0fb0c5f03a
+Sensitive Field Only Fix	50	incgrp_291af020a6d5dc0fb0c5f03a
+Merge Collapsed Record	50	incgrp_8a93bf501f08b58470236931
+Duplicate Payment	50	incgrp_15aa9e9c5b9e9624e7152f77",2026-08-27T08:32:52-04:00,unavailable,310
+"Reform support ticket section with clear, actionable triage guidance","The following section needs serious reform so it provides much more useful information that is understandable, useful, helpful, actionable
+
+Joinable SQL fields
+Extracted tickets",2026-08-27T09:03:26-04:00,unavailable,unavailable
+"Reform human decision boundary and proposal queue","The following section needs serious reform so it provides much more useful information that is understandable, useful, helpful, actionable
+
+Human decision boundary
+Proposal queue",2026-08-27T09:12:09-04:00,unavailable,unavailable
+"Reform current evidence window and trust overview","The following section needs serious reform so it provides much more useful information that is understandable, useful, helpful, actionable
+
+Current evidence window
+Trust overview",2026-08-27T09:15:52-04:00,unavailable,unavailable
+"Reform deterministic invariant conflict evidence","The following section needs serious reform so it provides much more useful information that is understandable, useful, helpful, actionable
+
+Deterministic invariant output
+Conflict evidence",2026-08-27T09:16:07-04:00,unavailable,unavailable
+"Add reusable home-screen accordions","there is a LOT of information on the home screen, so we must create a reusable accordion component, and the first accordion should default to being open, but the others should default to being closed on startup of website",2026-08-27T09:33:09-04:00,unavailable,unavailable
+"Revise accordion storyline from screenshot","<image name=[Image #1] path=""/var/folders/_h/l4g0b4vd73d0ltrvzxy03cp80000gn/T/codex-clipboard-UaTGBU.png"">[Image #1]</image>the titles/descriptions of the accordions must tell a better, more cohesive storyline that the user can follow, so the dashboard feels elegant + simple
+
+screenshot of current homescreen attached, please revise, you are an exceptional user interface product designer engineer!
+
+[Image #1]",2026-08-27T09:42:52-04:00,unavailable,unavailable

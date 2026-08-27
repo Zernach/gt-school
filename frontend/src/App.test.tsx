@@ -40,9 +40,12 @@ beforeEach(() => {
 
 async function renderLoadedApp() {
   const result = render(<App />);
-  await screen.findByRole('heading', { name: 'Trust overview' });
+  await screen.findByRole('heading', { name: 'Start with the evidence' });
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Expand Find the conflicts' }));
+  await user.click(screen.getByRole('button', { name: 'Expand Decide what to record' }));
   await screen.findAllByRole('button', { name: 'Paid But No Deal' });
-  await screen.findByRole('heading', { name: 'Proposal queue' });
+  await screen.findByRole('heading', { name: 'Decide what to record' });
   return result;
 }
 
@@ -63,6 +66,17 @@ describe('dashboard shell', () => {
     await renderLoadedApp();
     expect(screen.getByText('Evidence connected')).toBeInTheDocument();
     expect(screen.getByText('Evidence connected').querySelector('.status-symbol')).toHaveTextContent('✓');
+  });
+
+  it('opens only the first accordion at startup', async () => {
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
+    await screen.findByRole('heading', { name: 'Add support context' });
+    expect(screen.getByRole('button', { name: 'Collapse Start with the evidence' })).toHaveAttribute('aria-expanded', 'true');
+    for (const title of ['Find the conflicts', 'See the bigger pattern', 'Decide what to record', 'Add support context']) {
+      expect(screen.getByRole('button', { name: `Expand ${title}` })).toHaveAttribute('aria-expanded', 'false');
+    }
+    expect(document.getElementById('conflict-evidence-accordion-panel')).toHaveAttribute('hidden');
   });
 
   it('requests overview, active conflicts, and pending proposals at startup', async () => {
@@ -134,11 +148,11 @@ describe('dashboard loading states', () => {
     mockedGetIncidentGroups.mockReturnValue(new Promise(() => undefined));
     mockedGetTickets.mockReturnValue(new Promise(() => undefined));
     render(<App />);
-    await screen.findByRole('heading', { name: 'Trust overview' });
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
     expect(screen.getByText('Checking this evidence window…')).toBeInTheDocument();
     expect(screen.getByText('Loading proposal queue…')).toBeInTheDocument();
     expect(screen.getByText('Loading incident groups…')).toBeInTheDocument();
-    expect(screen.getByText('Loading extracted tickets…')).toBeInTheDocument();
+    expect(screen.getByText('Loading support tickets…')).toBeInTheDocument();
     expect(screen.getAllByText(/Loading|Checking/u).every((element) => element.closest('[aria-busy="true"]') !== null)).toBe(true);
   });
 
@@ -156,7 +170,7 @@ describe('dashboard loading states', () => {
 
       await act(async () => vi.advanceTimersByTimeAsync(1_000));
       expect(mockedGetOverview).toHaveBeenCalledTimes(2);
-      expect(screen.getByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Start with the evidence' })).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
@@ -165,14 +179,16 @@ describe('dashboard loading states', () => {
   it('disables refresh while conflict evidence is loading', async () => {
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     render(<App />);
-    await screen.findByRole('heading', { name: 'Trust overview' });
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
+    expect(screen.getByRole('button', { name: 'Refresh evidence' })).toBeDisabled();
   });
 
   it('disables conflict filters while conflict evidence is loading', async () => {
+    const user = userEvent.setup();
     mockedGetConflicts.mockReturnValue(new Promise(() => undefined));
     render(<App />);
-    await screen.findByRole('heading', { name: 'Trust overview' });
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
+    await user.click(screen.getByRole('button', { name: 'Expand Find the conflicts' }));
     expect(screen.getByRole('group', { name: 'Filter conflicts' })).toBeDisabled();
   });
 
@@ -262,7 +278,7 @@ describe('overview failure and retry', () => {
     mockedGetOverview.mockRejectedValueOnce(new Error('First overview failure')).mockResolvedValueOnce(overviewFixture());
     render(<App />);
     await user.click(await screen.findByRole('button', { name: 'Retry overview' }));
-    expect(await screen.findByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Start with the evidence' })).toBeInTheDocument();
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
@@ -272,20 +288,44 @@ describe('overview failure and retry', () => {
 });
 
 describe('conflict evidence interactions', () => {
+  it('explains the result and offers task-oriented review shortcuts', async () => {
+    await renderLoadedApp();
+    expect(screen.getByText('02 · Investigate')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Turn a repeatable failure into a safe decision' })).toBeInTheDocument();
+    expect(screen.getByText(/Unchecked is not clean/u)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Active failures' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name: 'Results summary' })).toHaveTextContent('2 conflicts on this page · more results available');
+    expect(screen.getByRole('columnheader', { name: 'Affected records' })).toBeInTheDocument();
+  });
+
+  it('loads the pending-review shortcut as an active conflict filter', async () => {
+    const user = userEvent.setup();
+    await renderLoadedApp();
+    await user.click(screen.getByRole('button', { name: 'Pending review' }));
+    await waitFor(() => expect(mockedGetConflicts).toHaveBeenCalledTimes(2));
+    expect(mockedGetConflicts.mock.calls[1]?.[0]).toMatchObject({ status: 'active', proposalStatus: 'pending' });
+    expect(mockedGetConflicts.mock.calls[1]?.[1]).toBeUndefined();
+  });
+
   it('renders a request-correlated conflict list error independently', async () => {
+    const user = userEvent.setup();
     mockedGetConflicts.mockRejectedValue(new ApiError(400, 'invalid_request', 'Conflict window invalid.', 'request-conflicts'));
     render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Find the conflicts' }));
     const panel = await screen.findByRole('alert');
     expect(within(panel).getByRole('heading', { name: 'Conflicts unavailable' })).toBeInTheDocument();
     expect(within(panel).getByText('Conflict window invalid. Request request-conflicts.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Trust overview' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start with the evidence' })).toBeInTheDocument();
   });
 
   it('retries all evidence windows from conflict retry', async () => {
     const user = userEvent.setup();
     mockedGetConflicts.mockRejectedValueOnce(new Error('First conflict failure')).mockResolvedValueOnce(conflictListFixture());
     render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Find the conflicts' }));
     await user.click(await screen.findByRole('button', { name: 'Retry conflicts' }));
+    await user.click(await screen.findByRole('button', { name: 'Expand Find the conflicts' }));
+    await user.click(await screen.findByRole('button', { name: 'Expand Decide what to record' }));
     expect(await screen.findAllByRole('button', { name: 'Paid But No Deal' })).toHaveLength(2);
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
@@ -297,7 +337,7 @@ describe('conflict evidence interactions', () => {
   it('refreshes all evidence windows from the explicit refresh button', async () => {
     const user = userEvent.setup();
     await renderLoadedApp();
-    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    await user.click(screen.getByRole('button', { name: 'Refresh evidence' }));
     await waitFor(() => expect(mockedGetOverview).toHaveBeenCalledTimes(2));
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
@@ -359,10 +399,12 @@ describe('conflict evidence interactions', () => {
 
 describe('proposal queue interactions', () => {
   it('renders a proposal error independently', async () => {
+    const user = userEvent.setup();
     mockedGetProposals.mockRejectedValue(new ApiError(503, 'unavailable', 'Queue unavailable.', 'request-queue'));
     render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Decide what to record' }));
     const panel = await screen.findByRole('alert');
-    expect(within(panel).getByRole('heading', { name: 'Proposal queue unavailable' })).toBeInTheDocument();
+    expect(within(panel).getByRole('heading', { name: 'Decision queue unavailable' })).toBeInTheDocument();
     expect(within(panel).getByText('Queue unavailable. Request request-queue.')).toBeInTheDocument();
   });
 
@@ -370,8 +412,12 @@ describe('proposal queue interactions', () => {
     const user = userEvent.setup();
     mockedGetProposals.mockRejectedValueOnce(new Error('First queue failure')).mockResolvedValueOnce([proposalFixture()]);
     render(<App />);
-    await user.click(await screen.findByRole('button', { name: 'Retry queue' }));
-    expect(await screen.findByRole('heading', { name: 'Proposal queue' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Expand Decide what to record' }));
+    await user.click(await screen.findByRole('button', { name: 'Retry decisions' }));
+    await waitFor(() => {
+      expect(mockedGetProposals).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('heading', { name: 'Decide what to record' })).toBeInTheDocument();
+    });
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
     expect(mockedGetConflicts).toHaveBeenCalledTimes(2);
     expect(mockedGetProposals).toHaveBeenCalledTimes(2);
@@ -382,7 +428,7 @@ describe('proposal queue interactions', () => {
   it.each(['', 'approved', 'rejected', 'held', 'applied', 'rolled_back'])('refetches queue status %j', async (status) => {
     const user = userEvent.setup();
     await renderLoadedApp();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Queue status' }), status);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Review state' }), status);
     await waitFor(() => expect(mockedGetProposals).toHaveBeenCalledTimes(2));
     expect(mockedGetProposals.mock.calls[1]?.[0]).toBe(status);
   });
