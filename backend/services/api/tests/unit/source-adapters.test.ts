@@ -9,7 +9,7 @@ import type { ReadOnlySourceAdapter, SourceSnapshot } from '../../src/sources/ad
 import { SourceAdapterError } from '../../src/sources/adapter.js';
 import { FaultInjectingAdapter } from '../../src/sources/fault-adapter.js';
 import { FileFixtureAdapter } from '../../src/sources/file-adapters.js';
-import { createSourceAdapters } from '../../src/sources/index.js';
+import { cacheFixtureSetLoads, createSourceAdapters } from '../../src/sources/index.js';
 import { makeContact, makeDeal, makeEnrollment, makePayment, makeStudent } from '../helpers/fixtures.js';
 
 let fixtureRoot = '';
@@ -334,6 +334,23 @@ describe('fault-injecting adapter', () => {
 
 describe('source adapter factory', () => {
   const pool = { query: vi.fn() } as unknown as DatabasePool;
+
+  it('coalesces concurrent fixture loads for one generation and retries a rejected load', async () => {
+    const fixture = {} as Awaited<ReturnType<Parameters<typeof cacheFixtureSetLoads>[0]>>;
+    const load = vi.fn<(generation: number) => Promise<typeof fixture>>()
+      .mockRejectedValueOnce(new Error('temporary fixture read failure'))
+      .mockResolvedValue(fixture);
+    const cached = cacheFixtureSetLoads(load);
+
+    await expect(cached(3)).rejects.toThrow('temporary fixture read failure');
+    const [first, second] = await Promise.all([cached(3), cached(3)]);
+
+    expect(first).toBe(fixture);
+    expect(second).toBe(fixture);
+    expect(load).toHaveBeenCalledTimes(2);
+    await cached(2);
+    expect(load).toHaveBeenCalledTimes(3);
+  });
 
   it('constructs exactly CRM, app, and payments in stable order', () => {
     const config = loadConfig({ NODE_ENV: 'test', FIXTURE_ROOT: '/fixtures' });

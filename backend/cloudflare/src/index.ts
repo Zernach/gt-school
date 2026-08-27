@@ -5,6 +5,17 @@ const apiPrefix = '/api/v1/';
 const singletonContainerName = 'keystone-demo-v1';
 const maximumRequestBodyBytes = 1_048_576;
 
+export const cloudflareDemoContainerEnv = {
+  NODE_ENV: 'production',
+  HOST: '0.0.0.0',
+  API_CONTAINER_PORT: '8080',
+  WORKER_HEALTH_PORT: '3001',
+  READINESS_SENTINEL_PATH: '/tmp/keystone-ready/bootstrapped',
+  // The managed Container parses a 39 MB synthetic fixture set without a
+  // network source. Five seconds is too short under its CPU allocation.
+  SOURCE_TIMEOUT_MS: '60000'
+} as const;
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -39,13 +50,7 @@ export class KeystoneDemoContainer extends Container<Env> {
   override enableInternet = false;
   override pingEndpoint = '/ready';
   override entrypoint = ['/opt/keystone/bin/ephemeral-entrypoint.sh'];
-  override envVars = {
-    NODE_ENV: 'production',
-    HOST: '0.0.0.0',
-    API_CONTAINER_PORT: '8080',
-    WORKER_HEALTH_PORT: '3001',
-    READINESS_SENTINEL_PATH: '/tmp/keystone-ready/bootstrapped'
-  };
+  override envVars = cloudflareDemoContainerEnv;
 
   override onStart(): void {
     console.log(JSON.stringify({ event: 'container.started', dataLifecycle: 'ephemeral', instance: singletonContainerName }));

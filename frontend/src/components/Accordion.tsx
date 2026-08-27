@@ -9,6 +9,8 @@ interface AccordionProps {
   children: ReactNode;
   className?: string;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function Accordion({
@@ -19,10 +21,19 @@ export function Accordion({
   heading,
   children,
   className = '',
-  defaultOpen = false
+  defaultOpen = false,
+  open,
+  onOpenChange
 }: AccordionProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const expanded = open ?? uncontrolledOpen;
   const panelId = `${id}-panel`;
+
+  const toggle = () => {
+    const next = !expanded;
+    if (open === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
 
   return (
     <section aria-labelledby={headingId} aria-describedby={descriptionId} className={`accordion ${className}`.trim()}>
@@ -32,14 +43,14 @@ export function Accordion({
           type="button"
           className="accordion-toggle"
           aria-controls={panelId}
-          aria-expanded={open}
-          aria-label={`${open ? 'Collapse' : 'Expand'} ${title}`}
-          onClick={() => setOpen((value) => !value)}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+          onClick={toggle}
         >
-          <span className="accordion-icon" aria-hidden="true">{open ? '−' : '+'}</span>
+          <span className="accordion-icon" aria-hidden="true">{expanded ? '−' : '+'}</span>
         </button>
       </div>
-      <div id={panelId} className="accordion-panel" hidden={!open}>
+      <div id={panelId} className="accordion-panel" hidden={!expanded}>
         {children}
       </div>
     </section>

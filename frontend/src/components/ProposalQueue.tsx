@@ -81,7 +81,9 @@ export function ProposalQueue({
   onType,
   onSource,
   onConflict,
-  defaultOpen = true
+  defaultOpen = true,
+  open,
+  onOpenChange
 }: {
   proposals: Proposal[];
   status: string;
@@ -92,6 +94,8 @@ export function ProposalQueue({
   onSource?: (source: string) => void;
   onConflict: (id: string) => void;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const pendingCount = proposals.filter((proposal) => proposal.status === 'pending').length;
   const heldCount = proposals.filter((proposal) => proposal.status === 'held').length;
@@ -103,6 +107,8 @@ export function ProposalQueue({
       headingId="queue-heading"
       descriptionId="queue-description"
       defaultOpen={defaultOpen}
+      {...(open === undefined ? {} : { open })}
+      {...(onOpenChange === undefined ? {} : { onOpenChange })}
       className="panel-section"
       heading={
         <div className="section-heading">

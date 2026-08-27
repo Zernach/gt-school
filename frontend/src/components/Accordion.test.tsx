@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Accordion } from './Accordion';
@@ -30,5 +31,20 @@ describe('Accordion', () => {
     renderAccordion(true);
     expect(screen.getByRole('button', { name: 'Collapse Test details' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('Hidden until opened.')).toBeVisible();
+  });
+
+  it('supports a controlled expanded state', async () => {
+    const user = userEvent.setup();
+    function ControlledAccordion() {
+      const [open, setOpen] = useState(false);
+      return <Accordion id="controlled-accordion" title="Controlled details" headingId="controlled-heading" open={open} onOpenChange={setOpen} heading={<h2 id="controlled-heading">Controlled details</h2>}>
+        <p>Controlled panel content.</p>
+      </Accordion>;
+    }
+
+    render(<ControlledAccordion />);
+    await user.click(screen.getByRole('button', { name: 'Expand Controlled details' }));
+    expect(screen.getByRole('button', { name: 'Collapse Controlled details' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Controlled panel content.')).toBeVisible();
   });
 });

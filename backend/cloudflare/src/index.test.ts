@@ -3,13 +3,20 @@ import { describe, expect, test, vi } from 'vitest';
 vi.mock('@cloudflare/containers', () => ({ Container: class {} }));
 
 import { forwardToReadyContainer } from './container-proxy.js';
-import worker from './index.js';
+import worker, { cloudflareDemoContainerEnv } from './index.js';
 
 function environment(container: { startAndWaitForPorts: ReturnType<typeof vi.fn>; fetch: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }) {
   return { KEYSTONE_DEMO: { getByName: vi.fn(() => container) } } as unknown as Env;
 }
 
 describe('Container proxy', () => {
+  test('sets a bounded fixture-read timeout appropriate for the managed demo Container', () => {
+    expect(cloudflareDemoContainerEnv).toMatchObject({
+      READINESS_SENTINEL_PATH: '/tmp/keystone-ready/bootstrapped',
+      SOURCE_TIMEOUT_MS: '60000'
+    });
+  });
+
   test('starts on the declared port before forwarding without buffering the request', async () => {
     const request = new Request('https://api.example/ready');
     const response = new Response('ready');

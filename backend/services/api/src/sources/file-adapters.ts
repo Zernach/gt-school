@@ -1,7 +1,9 @@
 import { access } from 'node:fs/promises';
-import type { SourceKind } from '../domain/fixture-types.js';
+import type { FixtureSet, SourceKind } from '../domain/fixture-types.js';
 import { loadFixtureSet } from '../fixtures/reader.js';
 import type { ReadOnlySourceAdapter, SourceHealth, SourceRecord, SourceSnapshot } from './adapter.js';
+
+export type FixtureSetLoader = (generation: number) => Promise<FixtureSet>;
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error('source_aborted');
@@ -16,7 +18,11 @@ export class FileFixtureAdapter implements ReadOnlySourceAdapter {
   readonly schemaVersion = 'fixtures-v1';
   readonly adapterVersion = 'file-adapter-v1';
 
-  constructor(readonly sourceKind: Extract<SourceKind, 'crm' | 'payments'>, private readonly fixtureRoot: string) {}
+  constructor(
+    readonly sourceKind: Extract<SourceKind, 'crm' | 'payments'>,
+    private readonly fixtureRoot: string,
+    private readonly loadFixtures: FixtureSetLoader = (generation) => loadFixtureSet(fixtureRoot, generation)
+  ) {}
 
   async health(): Promise<SourceHealth> {
     const started = performance.now();
@@ -31,7 +37,7 @@ export class FileFixtureAdapter implements ReadOnlySourceAdapter {
   async readSnapshot(generation: number, signal?: AbortSignal): Promise<SourceSnapshot> {
     const started = performance.now();
     throwIfAborted(signal);
-    const fixtures = await loadFixtureSet(this.fixtureRoot, generation);
+    const fixtures = await this.loadFixtures(generation);
     throwIfAborted(signal);
     const records: SourceRecord[] = [];
     if (this.sourceKind === 'crm') {

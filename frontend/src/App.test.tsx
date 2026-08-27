@@ -156,6 +156,21 @@ describe('dashboard loading states', () => {
     expect(screen.getAllByText(/Loading|Checking/u).every((element) => element.closest('[aria-busy="true"]') !== null)).toBe(true);
   });
 
+  it('keeps the proposal queue open when its loading state is replaced with results', async () => {
+    let resolveProposals: ((proposals: ReturnType<typeof proposalFixture>[]) => void) | undefined;
+    mockedGetProposals.mockImplementation(() => new Promise((resolve) => { resolveProposals = resolve; }));
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
+    await user.click(screen.getByRole('button', { name: 'Expand Decide what to record' }));
+    expect(screen.getByText('Loading proposal queue…')).toBeVisible();
+
+    await act(async () => resolveProposals?.([proposalFixture()]));
+
+    expect(await screen.findByRole('combobox', { name: 'Review state' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Collapse Decide what to record' })).toHaveAttribute('aria-expanded', 'true');
+  });
+
   it('automatically retries while the transient backend restores its baseline', async () => {
     vi.useFakeTimers();
     try {
