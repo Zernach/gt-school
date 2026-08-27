@@ -5,9 +5,13 @@ async function loadDashboard(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
   await expect(page.getByText('Evidence connected')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Trust overview' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Conflict evidence' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Proposal queue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start with the evidence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Find the conflicts' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Decide what to record' })).toBeVisible();
+  await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>('button[aria-label="Expand Find the conflicts"]')?.click();
+    document.querySelector<HTMLButtonElement>('button[aria-label="Expand Decide what to record"]')?.click();
+  });
 }
 
 test.describe('production dashboard', () => {
@@ -57,20 +61,20 @@ test.describe('production dashboard', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#main-content$/u);
 
-    const conflictRegion = page.getByRole('region', { name: 'Conflict evidence' });
+    const conflictRegion = page.getByRole('region', { name: 'Find the conflicts' });
     await conflictRegion.getByRole('combobox', { name: 'Source' }).selectOption('payments');
     await expect(conflictRegion.getByText('Checking this evidence window…')).toBeHidden();
     const rows = conflictRegion.locator('tbody tr');
     await expect(rows.first()).toBeVisible();
     const rowCount = await rows.count();
-    for (let index = 0; index < rowCount; index += 1) await expect(rows.nth(index).getByRole('list', { name: 'Sources' })).toContainText('payments');
+    for (let index = 0; index < rowCount; index += 1) await expect(rows.nth(index).getByRole('list', { name: 'Evidence sources' })).toContainText('Payments');
     await conflictRegion.getByRole('button', { name: 'Reset' }).click();
     await expect(conflictRegion.getByRole('combobox', { name: 'Source' })).toHaveValue('');
   });
 
   test('opens an auditable modal, traps focus, and restores the invoking control', async ({ page }) => {
     await loadDashboard(page);
-    const conflictRegion = page.getByRole('region', { name: 'Conflict evidence' });
+    const conflictRegion = page.getByRole('region', { name: 'Find the conflicts' });
     await conflictRegion.getByRole('combobox', { name: 'Proposal status' }).selectOption('pending');
     await expect(conflictRegion.getByText('Checking this evidence window…')).toBeHidden();
     const trigger = conflictRegion.locator('tbody .row-link').first();
@@ -104,7 +108,7 @@ test.describe('production dashboard', () => {
     const loaded = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     expect(loaded.violations).toEqual([]);
 
-    await page.getByRole('region', { name: 'Conflict evidence' }).locator('tbody .row-link').first().click();
+    await page.getByRole('region', { name: 'Find the conflicts' }).locator('tbody .row-link').first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
     const detail = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     expect(detail.violations).toEqual([]);
@@ -120,7 +124,7 @@ test.describe('production dashboard', () => {
     const filters = page.getByRole('group', { name: 'Filter conflicts' });
     await expect(filters.getByRole('combobox', { name: 'Conflict type' })).toBeVisible();
     await expect(filters.getByRole('combobox', { name: 'Minimum confidence' })).toBeVisible();
-    await expect(page.getByRole('combobox', { name: 'Queue status' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Review state' })).toBeVisible();
     expect(await page.evaluate(() => document.body.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 });

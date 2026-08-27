@@ -103,6 +103,13 @@ describe('conflict detail', () => {
     expect(within(section).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Source record', 'Field', 'Raw', 'Normalized', 'Transform']);
   });
 
+  it('makes long evidence blocks keyboard-scrollable', () => {
+    const { container } = render(<ConflictDetail detail={conflictDetailFixture()} onClose={vi.fn()} onDecided={vi.fn()} />);
+    const blocks = [...container.querySelectorAll('.evidence-json')];
+    expect(blocks).toHaveLength(3);
+    expect(blocks.every((block) => block.getAttribute('tabindex') === '0')).toBe(true);
+  });
+
   it('displays explicit null lineage values as em dash', () => {
     render(<ConflictDetail detail={conflictDetailFixture()} onClose={vi.fn()} onDecided={vi.fn()} />);
     expect(screen.getAllByText('—')).toHaveLength(2);

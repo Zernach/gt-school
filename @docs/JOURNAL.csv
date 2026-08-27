@@ -309,3 +309,11 @@ Conflict evidence",2026-08-27T09:16:07-04:00,unavailable,unavailable
 screenshot of current homescreen attached, please revise, you are an exceptional user interface product designer engineer!
 
 [Image #1]",2026-08-27T09:42:52-04:00,unavailable,unavailable
+"Fix broken Playwright tests","fix broken tests
+
+rking in the next major version of npm.
+
+> keystone-reconciliation@1.0.0 test:e2e
+> playwright test
+
+[Playwright failure report supplied with the request]",2026-08-27T10:06:55-04:00,unavailable,unavailable
