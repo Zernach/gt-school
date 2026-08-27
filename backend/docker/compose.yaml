@@ -145,6 +145,7 @@ services:
   postgres:
     image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
     <<: *service-defaults
+    command: ["postgres", "-c", "max_wal_size=4GB"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-keystone}
       POSTGRES_USER: ${POSTGRES_USER:-keystone_owner}

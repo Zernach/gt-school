@@ -457,3 +457,101 @@ Docs
 Contact
 Manage cookies
 Do not share my personal information",2026-08-27T14:07:38-0400,unavailable,unavailable
+Repaired live acceptance sync performance,"sleuth + solve the live acceptance tests errors in github
+
+Skip to content
+Zernach
+gt-school
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Security and quality
+Insights
+Settings
+Keystone CI
+fix sync + ci tests #24
+All jobs
+Run details
+Annotations
+2 errors and 1 warning
+live-acceptance
+failed 1 minute ago in 2m 45s
+Search logs
+1s
+2s
+3s
+7s
+3s
+54s
+1s
+13s
+1m 13s
+Run npm run test:integration
+
+> keystone-reconciliation@1.0.0 test:integration
+> npm run test:integration --workspace @keystone/api --
+
+
+> @keystone/api@1.0.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 /home/runner/work/gt-school/gt-school/backend/services/api
+
+ ❯ tests/integration/e2e.integration.test.ts (11 tests | 1 failed) 72231ms
+     ✓ reports process, database, queue, and all source adapters ready 43ms
+     ✓ enforces client and per-job trigger authentication 18ms
+     ✓ rejects malformed, invalid, and oversized fixture payloads with documented 4xx responses 27ms
+     × ingests exactly 120,000 source records and detects the 3,050-item golden set 38321ms
+     ✓ returns the committed hand-checked cross-source entity view 48ms
+     ✓ filters conflict data and returns field lineage without exposing a broad query scope 90ms
+     ✓ creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror  13258ms
+     ✓ runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged  6309ms
+     ✓ does not let viewer scope decide a proposal 18ms
+     ✓ returns the same durable job for a repeated idempotency key 13ms
+     ✓ degrades a real 5xx source to a structured partial run without hanging  14083ms
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/e2e.integration.test.ts > live Compose vertical contract > ingests exactly 120,000 source records and detects the 3,050-item golden set
+AssertionError: expected 37924 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+    143|     });
+    144|     const durationMs = Number(syncRun.result.durationMs);
+    145|     expect(durationMs).toBeLessThan(30_000);
+       |                        ^
+    146|     expect(120_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  18:11:48
+   Duration  72.47s (transform 48ms, setup 0ms, import 112ms, tests 72.23s, environment 0ms)
+
+Error: AssertionError: expected 37924 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+
+
+npm error Lifecycle script `test:integration` failed with error:
+npm error code 1
+npm error path /home/runner/work/gt-school/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error location /home/runner/work/gt-school/gt-school/backend/services/api
+npm error command failed
+Error: Process completed with exit code 1.
+0s
+0s
+0s
+0s
+0s
+0s
+5s
+0s
+0s
+0s",2026-08-27T14:22:54-04:00,unavailable,unavailable
