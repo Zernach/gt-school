@@ -1,0 +1,4 @@
+interface:
+  display_name: "GT School Stakeholder Scripts"
+  short_description: "Draft warm, clear stakeholder narration"
+  default_prompt: "Use $gt-school-stakeholder-scripts to draft a concise presentation narration for GT School stakeholders."

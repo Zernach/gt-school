@@ -720,3 +720,5 @@ Updated transient-backend restoration copy,"this text should mention it can take
 
 Restoring demo data
 The transient backend reset, so Keystone is rebuilding its canonical synthetic evidence. This page will refresh automatically.",2026-08-27T17:34:10-0400,unavailable,unavailable
+Created GT School stakeholder presentation script skill,"create a reusable skill that defines the voice and narration sript style for drafting presentation scripts to key stakeholders. some stakeholders are technical, but most are not, so we must be likable, humble, kind, intelligent, and witty. the audience is gt school (https://www.gt.school) as they are the key stakeholders, so all of their software solutions are education focused",2026-08-27T17:49:35-0400,unavailable,unavailable
+Moved GT School stakeholder script skill into repo,"nooooooo, not in my root. put the skill here in the gt-school repo",2026-08-27T17:51:43-0400,unavailable,unavailable
