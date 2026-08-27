@@ -1,4 +1,0 @@
-interface:
-  display_name: "GitHub Latest Commit"
-  short_description: "Fetch a repository’s newest GitHub commit"
-  default_prompt: "Use $github-latest-commit to fetch the most recent commit for this repository with GitHub CLI."
