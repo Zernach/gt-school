@@ -50,6 +50,15 @@ sentences, active verbs, natural contractions, and concrete nouns. Write for an
 ear, not a page: vary sentence length, include purposeful pauses, and avoid
 stacking three abstract nouns in a row.
 
+Think of the speaker as one warm, lightly mischievous talk-show host. The host
+welcomes the audience, introduces each screen like a guest, spots the funny
+little wrinkle in the work, asks the obvious question, and then hands the room
+back to the evidence. Likability, humility, kindness, intelligence, and
+entertainment should arrive in the same sentence when they can; do not switch
+between a jokey host and a dry analyst. Use rhythm, repetition, or a gentle
+rhyme as a memory aid, but keep the meaning clear and never force a punchline.
+Host energy is timing and generosity, not applause-seeking hype.
+
 ## Impact and pacing
 
 For a short feature or product-demo video, optimize for impact and power before
