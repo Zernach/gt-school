@@ -1,5 +1,5 @@
-The most important first step happened in an empty repository: I ran my custom `bootstrap` command from my machine's zprofile. With a single command, the strong foundation for our project was created: project directories, language-agnostic Docker patterns, test writing expectations, developer experience commands, agent guardrails, and even a prompt journal to record the steps that I took from beginning to end.
+The work began in an empty repository. I ran my custom `bootstrap` command from my machine's zprofile, which established the foundation for the project: its directory structure, language-agnostic Docker patterns, testing expectations, developer commands, agent guardrails, and a prompt journal to record the work from beginning to end.
 
-Secondly, I converted the project requirements from PDF to markdown, instructed doctoral thesis level research from my coding agents, and requested the draft of a one-shot prompt, which I then used to build out a solution end-to-end. From instructions, to research, to prompt engineering, each step I demonstrated doc-driven development.
+Next, I converted the project requirements from PDF to Markdown, asked my coding agents for doctoral-level research, and used that research to shape a one-shot implementation prompt. From requirements through research, prompt engineering, and delivery, the process stayed doc-driven.
 
-Lastly, I invested into simplifying the user experience, because the original implementation felt disjointed + overly complex.
+Finally, I refined the user experience. The first implementation felt disjointed and more complex than it needed to be, so I simplified the flow and focused the interface on the work a reviewer needs to complete.
