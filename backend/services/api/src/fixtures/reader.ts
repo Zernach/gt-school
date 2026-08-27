@@ -39,22 +39,21 @@ export async function readValidatedJsonl<T>(path: string, schema: ZodType<T>, ma
   let lineNumber = 0;
   for await (const line of lines) {
     lineNumber += 1;
-    const payloadHash = sha256(line);
     if (Buffer.byteLength(line, 'utf8') > maximumRecordBytes) {
-      rejections.push({ line: lineNumber, key: `line-${lineNumber}`, code: 'oversized_record', detail: `record exceeds ${maximumRecordBytes} bytes`, payloadHash });
+      rejections.push({ line: lineNumber, key: `line-${lineNumber}`, code: 'oversized_record', detail: `record exceeds ${maximumRecordBytes} bytes`, payloadHash: sha256(line) });
       continue;
     }
     let value: unknown;
     try {
       value = JSON.parse(line);
     } catch {
-      rejections.push({ line: lineNumber, key: `line-${lineNumber}`, code: 'malformed_json', detail: 'record is not valid JSON', payloadHash });
+      rejections.push({ line: lineNumber, key: `line-${lineNumber}`, code: 'malformed_json', detail: 'record is not valid JSON', payloadHash: sha256(line) });
       continue;
     }
     const parsed = schema.safeParse(value);
     if (!parsed.success) {
       const key = typeof value === 'object' && value !== null && 'fixture_record_id' in value ? String((value as { fixture_record_id: unknown }).fixture_record_id) : `line-${lineNumber}`;
-      rejections.push({ line: lineNumber, key, code: 'schema_invalid', detail: parsed.error.issues.map(({ path: issuePath, code }) => `${issuePath.join('.')}:${code}`).join(','), payloadHash });
+      rejections.push({ line: lineNumber, key, code: 'schema_invalid', detail: parsed.error.issues.map(({ path: issuePath, code }) => `${issuePath.join('.')}:${code}`).join(','), payloadHash: sha256(line) });
       continue;
     }
     records.push(parsed.data);

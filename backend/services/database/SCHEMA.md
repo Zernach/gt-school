@@ -85,7 +85,9 @@ Spend rows use `bigint` integer microcents. Reservations lock day and run ledger
 ## Indexes
 
 - scoped source lookup and field-lineage lookup;
-- GIN on mirrored payloads and conflict source arrays;
+- GIN on conflict source arrays; raw mirrored payloads are intentionally
+  unindexed because the API reaches them through source-record IDs and field
+  lineage, avoiding an ingestion-time index write for arbitrary JSON queries;
 - tenant/entity/update ordering for canonical queries;
 - tenant/verdict/rule for invariant inspection;
 - dashboard conflict status/type/time ordering and the unfiltered tenant/time cursor order;

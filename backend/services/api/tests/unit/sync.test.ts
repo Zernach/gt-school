@@ -268,6 +268,15 @@ describe('complete sync', () => {
     expect(audit.parameters?.[5]).toMatch(/^[0-9a-f]{64}$/u);
   });
 
+  it('does not duplicate raw source payloads into canonical entity storage', async () => {
+    const { pool, statements } = makePool();
+    await synchronize(pool, cleanAdapters(), config, request);
+    const canonicalEntities = statements.find(({ sql }) => sql.includes('INSERT INTO canonical_entities'));
+    const rows = JSON.parse(String(canonicalEntities?.parameters?.[1])) as Array<{ summary: Record<string, unknown> }>;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every(({ summary }) => !Object.hasOwn(summary, 'raw'))).toBe(true);
+  });
+
   it('is deterministic for identical source records and idempotency key', async () => {
     const first = await synchronize(makePool().pool, cleanAdapters(), config, request);
     const second = await synchronize(makePool().pool, cleanAdapters(), config, request);
@@ -461,8 +470,8 @@ describe('partial and failed sources', () => {
 });
 
 describe('batching and failure atomicity', () => {
-  it('batches more than 10,000 source records and more than 25,000 lineage rows', async () => {
-    const contacts = Array.from({ length: 10_001 }, (_, index) => {
+  it('batches more than 25,000 source records and more than 100,000 lineage rows', async () => {
+    const contacts = Array.from({ length: 25_001 }, (_, index) => {
       const student = makeStudent(index);
       const contact = makeContact(index, student);
       return sourceRecord('crm', 'contact', contact.crm_id, contact);
@@ -477,7 +486,7 @@ describe('batching and failure atomicity', () => {
     });
     const { pool, statements } = makePool();
     const result = await synchronize(pool, [crm, failed('app'), failed('payments')], { ...config, SOURCE_RETRY_LIMIT: 0 }, request);
-    expect(result).toMatchObject({ status: 'partial', acceptedRecords: 10_001 });
+    expect(result).toMatchObject({ status: 'partial', acceptedRecords: 25_001 });
     expect(statements.filter(({ sql }) => sql.includes('INSERT INTO source_records'))).toHaveLength(2);
     expect(statements.filter(({ sql }) => sql.includes('INSERT INTO field_observations')).length).toBeGreaterThan(1);
   });

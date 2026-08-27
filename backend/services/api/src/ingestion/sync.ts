@@ -11,6 +11,7 @@ import {
   type FixtureSet,
   type SourceKind
 } from '../domain/fixture-types.js';
+import { publicEntitySummary } from '../domain/dashboard-reconciliation.js';
 import { evaluateInvariants, RULE_SET_VERSION } from '../domain/invariants.js';
 import { sha256, stableStringify, stableUuid } from '../domain/stable.js';
 import type { DatabaseClient, DatabasePool } from '../persistence/database.js';
@@ -47,10 +48,10 @@ interface ReadOutcome {
   latencyMs: number;
 }
 
-const SOURCE_RECORD_BATCH_SIZE = 10_000;
-const LINEAGE_BATCH_SIZE = 25_000;
-const PROJECTION_BATCH_SIZE = 10_000;
-const INVARIANT_RESULT_BATCH_SIZE = 25_000;
+const SOURCE_RECORD_BATCH_SIZE = 25_000;
+const LINEAGE_BATCH_SIZE = 100_000;
+const PROJECTION_BATCH_SIZE = 25_000;
+const INVARIANT_RESULT_BATCH_SIZE = 100_000;
 
 type DatabaseExecutor = Pick<DatabasePool | DatabaseClient, 'query'>;
 
@@ -141,7 +142,7 @@ function fixtureSetFromSnapshots(snapshots: readonly SourceSnapshot[]): FixtureS
 async function persistProjection(executor: DatabaseExecutor, tenantId: string, fixtures: FixtureSet, recordIds: ReadonlyMap<string, number>): Promise<void> {
   const projection = buildCanonicalProjection(fixtures);
   for (let index = 0; index < projection.entities.length; index += PROJECTION_BATCH_SIZE) {
-    const batch = projection.entities.slice(index, index + PROJECTION_BATCH_SIZE).map((entity) => ({ id: entity.id, entity_kind: entity.entityKind, display_name: entity.displayName, resolution_status: entity.resolutionStatus, match_method: entity.matchMethod, match_score_bp: entity.matchScoreBp, summary: entity.summary }));
+    const batch = projection.entities.slice(index, index + PROJECTION_BATCH_SIZE).map((entity) => ({ id: entity.id, entity_kind: entity.entityKind, display_name: entity.displayName, resolution_status: entity.resolutionStatus, match_method: entity.matchMethod, match_score_bp: entity.matchScoreBp, summary: publicEntitySummary(entity.summary) }));
     await executor.query(`INSERT INTO canonical_entities(id, tenant_id, entity_kind, display_name, resolution_status, match_method, match_score_bp, summary)
       SELECT row.id, $1, row.entity_kind, row.display_name, row.resolution_status, row.match_method, row.match_score_bp, row.summary
       FROM jsonb_to_recordset($2::jsonb) AS row(id text, entity_kind text, display_name text, resolution_status text, match_method text, match_score_bp integer, summary jsonb)

@@ -835,3 +835,111 @@ Complete the rest of part 1 of the script. When I say ""Howdy, GT School! I'm ex
 And then the rest of the entire video is screensharing with my audio in the background",2026-08-27T17:58:22-04:00,unavailable,unavailable
 Condensed Part 1 stakeholder feature script,"Condense for impact + power. Should be 2-3 minutes max.",2026-08-27T18:04:14-04:00,unavailable,unavailable
 Update stakeholder script skill for concise demos,"this looks good. update the skill so the rest are more like this",2026-08-27T18:05:36-04:00,unavailable,unavailable
+Repaired remote CI sync throughput failure,"$debug-remote-git-workflows
+
+Skip to content
+Zernach
+gt-school
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Security and quality
+Insights
+Settings
+Keystone CI
+stakeholder script skill #28
+All jobs
+Run details
+Annotations
+2 errors and 1 warning
+live-acceptance
+failed 4 minutes ago in 3m 10s
+Search logs
+1s
+1s
+10s
+10s
+3s
+1m 5s
+1s
+13s
+1m 18s
+Run npm run test:integration
+
+> keystone-reconciliation@1.0.0 test:integration
+> npm run test:integration --workspace @keystone/api --
+
+
+> @keystone/api@1.0.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 /home/runner/work/gt-school/gt-school/backend/services/api
+
+ ❯ tests/integration/e2e.integration.test.ts (11 tests | 1 failed) 76587ms
+     ✓ reports process, database, queue, and all source adapters ready 44ms
+     ✓ enforces client and per-job trigger authentication 17ms
+     ✓ rejects malformed, invalid, and oversized fixture payloads with documented 4xx responses 31ms
+     × ingests exactly 120,000 source records and detects the 3,050-item golden set 41388ms
+     ✓ returns the committed hand-checked cross-source entity view  309ms
+     ✓ filters conflict data and returns field lineage without exposing a broad query scope 115ms
+     ✓ creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror 12252ms
+     ✓ runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged  6304ms
+     ✓ does not let viewer scope decide a proposal 18ms
+     ✓ returns the same durable job for a repeated idempotency key 11ms
+     ✓ degrades a real 5xx source to a structured partial run without hanging  16094ms
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/e2e.integration.test.ts > live Compose vertical contract > ingests exactly 120,000 source records and detects the 3,050-item golden set
+AssertionError: expected 40853 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+    143|     });
+    144|     const durationMs = Number(syncRun.result.durationMs);
+    145|     expect(durationMs).toBeLessThan(30_000);
+       |                        ^
+    146|     expect(120_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
+    147|
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files 1 passed (1)
+ Tests 1 failed | 10 passed (11)
+ Start at 21:56:30
+ Duration 76.84s (transform 49ms, setup 0ms, import 118ms, tests 76.59s, environment 0ms)
+
+Error: AssertionError: expected 40853 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+
+
+npm error Lifecycle script `test:integration` failed with error:
+npm error code 1
+npm error path /home/runner/work/gt-school/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error location /home/runner/work/gt-school/gt-school/backend/services/api
+npm error command failed
+npm error command sh -c vitest run tests/integration
+Error: Process completed with exit code 1.
+0s
+0s
+0s
+0s
+0s
+0s
+5s
+0s
+0s
+Footer
+© 2026 GitHub, Inc.
+Footer navigation
+Terms
+Privacy
+Status
+Community
+Docs
+Contact
+Manage cookies
+Do not share my personal information",2026-08-27T18:33:24-0400,unavailable,unavailable
