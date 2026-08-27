@@ -25,6 +25,9 @@ cat >"$tmp_dir/bin/npm" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'npm %s\n' "$*" >>"$GT_SCHOOL_TEST_LOG"
+if [[ "$*" == 'run benchmark' && "${GT_SCHOOL_TEST_BENCHMARK_FAILURE:-0}" == 1 ]]; then
+  exit 1
+fi
 EOF
 
 cat >"$tmp_dir/bin/curl" <<'EOF'
@@ -80,6 +83,7 @@ run_release() {
     GT_SCHOOL_TEST_SHA="$source_sha" \
     GT_SCHOOL_TEST_READY_COUNTER="$tmp_dir/ready-counter" \
     GT_SCHOOL_TEST_CONTAINER_COUNTER="$tmp_dir/container-counter" \
+    GT_SCHOOL_TEST_BENCHMARK_FAILURE="${GT_SCHOOL_TEST_BENCHMARK_FAILURE:-0}" \
     GT_SCHOOL_READY_ATTEMPTS=3 \
     GT_SCHOOL_READY_INTERVAL_SECONDS=1 \
     GT_SCHOOL_CONTAINER_ROLLOUT_ATTEMPTS=3 \
@@ -132,6 +136,17 @@ if GT_SCHOOL_TEST_ORIGIN_SHA=0000000000000000000000000000000000000000 run_releas
   exit 1
 fi
 grep -q 'HEAD must exactly match origin/main' "$tmp_dir/stale.log"
+
+benchmark_log="$tmp_dir/benchmark-commands.log"
+if GT_SCHOOL_TEST_BENCHMARK_FAILURE=1 GT_SCHOOL_TEST_LOG="$benchmark_log" run_release backend >"$tmp_dir/benchmark-failure.log" 2>&1; then
+  echo "benchmark failure must stop a backend release" >&2
+  exit 1
+fi
+grep -q 'npm run benchmark' "$benchmark_log"
+if grep -q 'wrangler run_wrangler_without_vpn npx --no-install wrangler whoami' "$benchmark_log"; then
+  echo "benchmark failure reached Cloudflare authentication" >&2
+  exit 1
+fi
 
 if bash "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh" nope >"$tmp_dir/bad-target.log" 2>&1; then
   echo "invalid target must fail" >&2

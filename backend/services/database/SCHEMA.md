@@ -1,6 +1,6 @@
 # Keystone database schema
 
-PostgreSQL 16 is Keystone's system of record. Redis is delivery transport only. `init/001-enable-pgvector.sql` enables pgvector; migration `002_stretch_ops.sql` stores real `vector(64)` embeddings for semantic incident grouping. Do not substitute JSON, text, or Redis for vector storage.
+PostgreSQL 16 is Keystone's system of record. Redis is delivery transport only. `init/001-enable-pgvector.sql` enables pgvector; migration `002_stretch_ops.sql` stores real `vector(64)` embeddings for semantic incident grouping, and migration `003_dashboard_lookup_indexes.sql` provides the dashboard's tenant/time and latest-proposal lookup paths. Do not substitute JSON, text, or Redis for vector storage.
 
 ## pgvector incident grouping
 
@@ -88,8 +88,8 @@ Spend rows use `bigint` integer microcents. Reservations lock day and run ledger
 - GIN on mirrored payloads and conflict source arrays;
 - tenant/entity/update ordering for canonical queries;
 - tenant/verdict/rule for invariant inspection;
-- dashboard conflict status/type/time ordering;
-- proposal status/confidence/time ordering;
+- dashboard conflict status/type/time ordering and the unfiltered tenant/time cursor order;
+- proposal status/confidence/time ordering plus tenant/conflict/recent lookup for the conflict-list lateral join;
 - ready-job status/next-attempt ordering;
 - audit object/time ordering;
 - HNSW cosine on incident embeddings;
