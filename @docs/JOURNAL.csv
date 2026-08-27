@@ -722,3 +722,116 @@ Restoring demo data
 The transient backend reset, so Keystone is rebuilding its canonical synthetic evidence. This page will refresh automatically.",2026-08-27T17:34:10-0400,unavailable,unavailable
 Created GT School stakeholder presentation script skill,"create a reusable skill that defines the voice and narration sript style for drafting presentation scripts to key stakeholders. some stakeholders are technical, but most are not, so we must be likable, humble, kind, intelligent, and witty. the audience is gt school (https://www.gt.school) as they are the key stakeholders, so all of their software solutions are education focused",2026-08-27T17:49:35-0400,unavailable,unavailable
 Moved GT School stakeholder script skill into repo,"nooooooo, not in my root. put the skill here in the gt-school repo",2026-08-27T17:51:43-0400,unavailable,unavailable
+Inspected matching remote CI run; no source repair while run is in progress,"$debug-remote-git-workflows
+Skip to content
+Zernach
+gt-school
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Security and quality
+Insights
+Settings
+Keystone CI
+debug ci skill #27
+All jobs
+Run details
+Annotations
+2 errors and 1 warning
+live-acceptance
+failed 10 minutes ago in 2m 45s
+Search logs
+1s
+1s
+1s
+8s
+3s
+57s
+1s
+14s
+1m 12s
+Run npm run test:integration
+
+> keystone-reconciliation@1.0.0 test:integration
+> npm run test:integration --workspace @keystone/api --
+
+
+> @keystone/api@1.0.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 /home/runner/work/gt-school/gt-school/backend/services/api
+
+ ❯ tests/integration/e2e.integration.test.ts (11 tests | 1 failed) 71334ms
+     ✓ reports process, database, queue, and all source adapters ready 45ms
+     ✓ enforces client and per-job trigger authentication 19ms
+     ✓ rejects malformed, invalid, and oversized fixture payloads with documented 4xx responses 28ms
+     × ingests exactly 120,000 source records and detects the 3,050-item golden set 39282ms
+     ✓ returns the committed hand-checked cross-source entity view 63ms
+     ✓ filters conflict data and returns field lineage without exposing a broad query scope 118ms
+     ✓ creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror 11299ms
+     ✓ runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged 6349ms
+     ✓ does not let viewer scope decide a proposal 20ms
+     ✓ returns the same durable job for a repeated idempotency key 14ms
+     ✓ degrades a real 5xx source to a structured partial run without hanging 14093ms
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/e2e.integration.test.ts > live Compose vertical contract > ingests exactly 120,000 source records and detects the 3,050-item golden set
+AssertionError: expected 38348 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+    143|     });
+
+ Test Files  1 failed (1)
+ Tests  1 failed (1)
+ Start at 21:42:53
+ Duration 71.62s (transform 73ms, setup 0ms, import 140ms, tests 71.33s, environment 0ms)
+
+    144|     const durationMs = Number(syncRun.result.durationMs);
+    145|     expect(durationMs).toBeLessThan(30_000);
+       |                        ^
+    146|     expect(120_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+Error: AssertionError: expected 38348 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+
+npm error Lifecycle script `test:integration` failed with error:
+npm error code 1
+npm error path /home/runner/work/gt-school/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error command failed
+npm error command sh -c vitest run tests/integration
+Error: Process completed with exit code 1.
+0s
+0s
+0s
+0s
+5s
+0s
+1s
+0s
+0s
+Footer
+© 2026 GitHub, Inc.
+Footer navigation
+Terms
+Security
+Status
+Community
+Docs
+Contact
+Manage cookies
+Do not share my personal information",2026-08-27T17:56:44-0400,unavailable,unavailable
+Complete Part 1 stakeholder feature walkthrough,"use $gt-school-stakeholder-scripts to edit @docs/script/1-features.md but do not change the first line ""Howdy, GT School! I'm excited to show how Keystone turns reconciliation errors into a review flow that is useful, actionable, and safe.""
+
+Complete the rest of part 1 of the script. When I say ""Howdy, GT School! I'm excited to show how Keystone turns reconciliation errors into a review flow that is useful, actionable, and safe."" it is a video.
+
+And then the rest of the entire video is screensharing with my audio in the background",2026-08-27T17:58:22-04:00,unavailable,unavailable
+Condensed Part 1 stakeholder feature script,"Condense for impact + power. Should be 2-3 minutes max.",2026-08-27T18:04:14-04:00,unavailable,unavailable
+Update stakeholder script skill for concise demos,"this looks good. update the skill so the rest are more like this",2026-08-27T18:05:36-04:00,unavailable,unavailable

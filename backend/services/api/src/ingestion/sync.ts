@@ -47,10 +47,10 @@ interface ReadOutcome {
   latencyMs: number;
 }
 
-const SOURCE_RECORD_BATCH_SIZE = 5_000;
-const LINEAGE_BATCH_SIZE = 10_000;
-const PROJECTION_BATCH_SIZE = 5_000;
-const INVARIANT_RESULT_BATCH_SIZE = 10_000;
+const SOURCE_RECORD_BATCH_SIZE = 10_000;
+const LINEAGE_BATCH_SIZE = 25_000;
+const PROJECTION_BATCH_SIZE = 10_000;
+const INVARIANT_RESULT_BATCH_SIZE = 25_000;
 
 type DatabaseExecutor = Pick<DatabasePool | DatabaseClient, 'query'>;
 
@@ -127,13 +127,15 @@ async function insertLineage(executor: DatabaseExecutor, tenantId: string, rows:
 
 function fixtureSetFromSnapshots(snapshots: readonly SourceSnapshot[]): FixtureSet {
   const records = snapshots.flatMap(({ records: sourceRecords }) => sourceRecords);
-  return {
-    crmContacts: records.filter(({ entityKind }) => entityKind === 'contact').map(({ payload }) => crmContactSchema.parse(payload)),
-    crmDeals: records.filter(({ entityKind }) => entityKind === 'deal').map(({ payload }) => crmDealSchema.parse(payload)),
-    appStudents: records.filter(({ entityKind }) => entityKind === 'student').map(({ payload }) => appStudentSchema.parse(payload)),
-    appEnrollments: records.filter(({ entityKind }) => entityKind === 'enrollment').map(({ payload }) => appEnrollmentSchema.parse(payload)),
-    payments: records.filter(({ entityKind }) => entityKind === 'payment').map(({ payload }) => paymentSchema.parse(payload))
-  };
+  const fixtures: FixtureSet = { crmContacts: [], crmDeals: [], appStudents: [], appEnrollments: [], payments: [] };
+  for (const { entityKind, payload } of records) {
+    if (entityKind === 'contact') fixtures.crmContacts.push(crmContactSchema.parse(payload));
+    else if (entityKind === 'deal') fixtures.crmDeals.push(crmDealSchema.parse(payload));
+    else if (entityKind === 'student') fixtures.appStudents.push(appStudentSchema.parse(payload));
+    else if (entityKind === 'enrollment') fixtures.appEnrollments.push(appEnrollmentSchema.parse(payload));
+    else if (entityKind === 'payment') fixtures.payments.push(paymentSchema.parse(payload));
+  }
+  return fixtures;
 }
 
 async function persistProjection(executor: DatabaseExecutor, tenantId: string, fixtures: FixtureSet, recordIds: ReadonlyMap<string, number>): Promise<void> {

@@ -1,14 +1,15 @@
 ---
 name: gt-school-stakeholder-scripts
-description: Draft spoken, slide-by-slide presentation narration for GT School stakeholders, translating technical software work into clear education outcomes with a warm, humble, intelligent, lightly witty voice.
+description: Draft concise, spoken presentation and product-demo narration for GT School stakeholders, translating technical software work into clear education outcomes with a warm, humble, intelligent, lightly witty voice.
 ---
 
 # GT School Stakeholder Scripts
 
 Use this skill when writing or revising a presentation talk track, speaker notes,
 demo narration, executive update, product walkthrough, or decision brief for GT
-School. It is for spoken narration accompanying a presentation; it is not a
-replacement for slide design, technical documentation, or marketing claims.
+School. It is for spoken narration accompanying a presentation or screen share;
+it is not a replacement for slide design, technical documentation, or marketing
+claims.
 
 ## Audience lens
 
@@ -49,6 +50,36 @@ sentences, active verbs, natural contractions, and concrete nouns. Write for an
 ear, not a page: vary sentence length, include purposeful pauses, and avoid
 stacking three abstract nouns in a row.
 
+## Impact and pacing
+
+For a short feature or product-demo video, optimize for impact and power before
+coverage. A viewer should understand the promise, see the workflow, and leave
+with one memorable safety boundary. Do not narrate every control or enumerate
+the implementation.
+
+- When the user asks for 2–3 minutes maximum, target approximately 300–380
+  spoken words including the opening. This leaves room for pauses and screen
+  movement at roughly 130–150 words per minute.
+- Count voiceover only; screen directions and metadata do not count toward the
+  spoken budget. If the draft is over budget, cut repeated caveats, secondary
+  features, and technical nouns before cutting the throughline or the safety
+  boundary.
+- Use one compact voiceover block per screen. Make each block do three things:
+  say what the viewer is seeing, explain why it matters, and name the decision
+  or safeguard it enables.
+- Prefer crisp contrasts that stakeholders can remember, such as “pending is
+  not a fix” or “unchecked is not clean,” when they are true of the source
+  material. Use one or two, not a slogan in every paragraph.
+- Keep framing metadata brief. Do not let a presentation-throughline,
+  stakeholder-ask, or optional-detail block crowd out the narration when the
+  user asks for a short recording.
+
+When the user specifies the recording format, make it operationally obvious. If
+they provide an opening line and say it is on camera, preserve that line
+exactly, place the camera direction after it, and mark the transition to
+full-screen screen share with voiceover. Do not rewrite or append stage
+directions to the user’s exact opening sentence.
+
 ## Narration method
 
 Before drafting, identify the presentation's audience, decision or outcome,
@@ -66,6 +97,20 @@ Build one throughline:
    experience.
 5. Give evidence, tradeoffs, risks, and what remains to be learned.
 6. End with a specific decision, response, introduction, or next step.
+
+For a screen-share feature demo, compress that throughline into this order:
+
+1. Establish the evidence or starting state.
+2. Show the core user action and the reason behind it.
+3. Open one representative result and expose the evidence, lineage, or
+   explanation behind it.
+4. Show the guarded human decision and state what remains unchanged.
+5. Mention secondary prioritization or context features in one sentence.
+6. Close on the user outcome and the question or feedback being requested.
+
+Keep the screen action and spoken narration separate. Use concrete cues such as
+`On screen:` and `Voiceover:` so the speaker knows what to click, pause on, or
+leave visible without reading the directions aloud.
 
 For each technical concept, use this order:
 
@@ -94,8 +139,8 @@ will solve a motivation, teaching, or learning problem by itself.
 
 ## Default output shape
 
-Unless the user requests another format, begin with a compact framing block and
-then provide a slide-by-slide talk track:
+For a standard presentation, begin with a compact framing block and then
+provide a slide-by-slide talk track:
 
 ```text
 Presentation throughline: <one sentence>
@@ -115,6 +160,35 @@ narration supplies meaning, context, and movement. Use `[VERIFY: ...]` for a
 material claim that lacks source support instead of filling the gap with an
 invented detail.
 
+For a short screen-share feature demo, use this lighter shape unless the user
+asks for a different format:
+
+```text
+<user-supplied opening line, unchanged>
+
+[ON CAMERA — VIDEO]
+Deliver the opening line above on camera. Then switch to a full-screen screen
+share. Everything below is voiceover with the screen share visible.
+
+# Part <number> — <topic>
+
+Estimated delivery: 2–3 minutes at a conversational pace.
+
+## Screen 1 — <user-facing outcome>
+On screen: <one concrete action or view>
+Voiceover: “<short spoken block>”
+
+...
+
+## Close — <outcome>
+On screen: <final state to leave visible>
+Voiceover: “<confident, source-faithful conclusion>”
+```
+
+Use only the number of screens needed to tell the story. In a 2–3 minute demo,
+four to six screen moments is usually enough; combine adjacent secondary
+features rather than turning every feature into its own section.
+
 ## Final pass
 
 Read the script aloud mentally or literally and revise anything that sounds
@@ -126,4 +200,5 @@ like a memo. Check that:
 - claims distinguish evidence from aspiration and include meaningful caveats;
 - transitions explain why the next slide follows;
 - the ask is concrete and the ending is confident without overselling; and
-- the total spoken word count fits the requested time.
+- the total spoken word count fits the requested time, with a margin for pauses
+  and screen movement.

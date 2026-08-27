@@ -55,7 +55,6 @@ export function buildCanonicalProjection(fixtures: FixtureSet): ProjectionResult
     paymentsByStudent.set(studentId, group);
   }
   const enrollmentsByStudent = new Map(fixtures.appEnrollments.map((enrollment) => [enrollment.student_id, enrollment]));
-  const contactsById = new Map(fixtures.crmContacts.map((contact) => [contact.crm_id, contact]));
   const dealsByStudent = new Map<string, typeof fixtures.crmDeals>();
   for (const deal of fixtures.crmDeals) {
     const studentIds = new Set(deal.associated_contact_ids.map((contactId) => contactStudentIds.get(contactId)).filter((id): id is string => Boolean(id)));
@@ -68,6 +67,7 @@ export function buildCanonicalProjection(fixtures: FixtureSet): ProjectionResult
   const entities: CanonicalProjection[] = [];
   const links: ProjectionLink[] = [];
   const householdMembers = new Map<string, string[]>();
+  const householdGuardianEmails = new Map<string, string>();
   for (const student of fixtures.appStudents) {
     const id = `entity:${student.id}`;
     const contacts = contactsByStudent.get(student.id) ?? [];
@@ -109,6 +109,7 @@ export function buildCanonicalProjection(fixtures: FixtureSet): ProjectionResult
       const members = householdMembers.get(student.household_id) ?? [];
       members.push(id);
       householdMembers.set(student.household_id, members);
+      if (!householdGuardianEmails.has(student.household_id)) householdGuardianEmails.set(student.household_id, student.guardian_email);
     }
   }
   for (const contact of fixtures.crmContacts) {
@@ -124,10 +125,8 @@ export function buildCanonicalProjection(fixtures: FixtureSet): ProjectionResult
     links.push({ canonicalId: id, sourceKind: 'payments', entityKind: 'payment', sourceId: payment.fixture_record_id, matchMethod: 'none', matchScoreBp: 0, evidence: {} });
   }
   const households = [...householdMembers].map(([id, members]) => {
-    const student = fixtures.appStudents.find(({ household_id }) => household_id === id);
-    return { id, guardianEmailHash: sha256(normalizeEmail(student?.guardian_email ?? `${id}@example.test`).value), members };
+    return { id, guardianEmailHash: sha256(normalizeEmail(householdGuardianEmails.get(id) ?? `${id}@example.test`).value), members };
   });
-  void contactsById;
   entities.sort((left, right) => left.id.localeCompare(right.id));
   links.sort((left, right) => `${left.canonicalId}:${left.sourceKind}:${left.sourceId}`.localeCompare(`${right.canonicalId}:${right.sourceKind}:${right.sourceId}`));
   households.sort((left, right) => left.id.localeCompare(right.id));
