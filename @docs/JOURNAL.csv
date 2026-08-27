@@ -354,3 +354,12 @@ Aligned Cloudflare image platform,"align the image platform warning that occurs 
 => => naming to docker.io/library/keystone-cloudflare-demo  0.0s
 WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested",2026-08-27T11:16:38-04:00,unavailable,unavailable
 Drafted sub-90-second home-screen stakeholder script,"i am demonstrating the home screen for a presentation to the stakeholders in the @docs/SCRIPT.md which should begin with ""Howdy, GT School! I'm excited to demonstrate how I've converted your pesky reconciliation errors into a solution that's useful, actionable, and simple!"" and you write the rest. should be under 90 seconds",2026-08-27T12:53:33-0400,unavailable,unavailable
+Drafted sub-90-second coding script,"i have split the @docs/script into 1, 2, and 3
+
+read @docs/JOURNAL.csv and describe how I coded this assignment in @docs/script/2-coding.md 
+
+should be less than 90 seconds",2026-08-27T13:38:08-0400,unavailable,unavailable
+Revised coding script to foreground custom bootstrap,"the first step was the most important: my custom ""bootstrap"" command, that i ran in the empty repository for step 1
+
+/Users/zernach/code/zprofile/zprofile-components/functions/bootstrap",2026-08-27T13:40:52-0400,unavailable,unavailable
+Consolidated executive coding script,"Consolidate the message from @docs/script/2-coding.md  into more condensed, impactful, powerful words. Fewer words, bigger impact. Imagine we are presenting to an executive team, who some are technical, but most are not.",2026-08-27T13:44:36-0400,unavailable,unavailable
