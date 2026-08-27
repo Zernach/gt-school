@@ -153,7 +153,11 @@ git -C "$ROOT_DIR" fetch origin main
 [[ "$(git -C "$ROOT_DIR" rev-parse origin/main)" == "$SOURCE_SHA" ]] || fail "HEAD must exactly match origin/main"
 
 echo "Preparing Cloudflare demo release target=$DEPLOY_TARGET sha=$SOURCE_SHA"
-npm ci --ignore-scripts
+# This release runs source CLIs and the full test/build gate. Explicitly include
+# workspace dev dependencies so inherited production-pruning configuration
+# cannot remove tsx (or the verification tooling) after a successful npm ci.
+npm ci --include=dev --ignore-scripts
+[[ -x "$ROOT_DIR/node_modules/.bin/tsx" ]] || fail "release dependency install did not provide tsx; rerun npm ci --include=dev --ignore-scripts before retrying"
 npm run seed -- --seed 424242
 npm run lint
 npm run typecheck

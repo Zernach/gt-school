@@ -34,7 +34,7 @@ PostgreSQL is the system of record for jobs, snapshots, lineage, entities, confl
 Requires Docker Compose v2, Node.js 24+, and npm 11+.
 
 ```sh
-npm ci
+npm ci --include=dev
 npm run seed -- --seed 424242
 npm start                 # Start stack, Build, Verify, Show status, or Deploy
 npm run compose:up

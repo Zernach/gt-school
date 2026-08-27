@@ -318,3 +318,34 @@ rking in the next major version of npm.
 
 [Playwright failure report supplied with the request]",2026-08-27T10:06:55-04:00,unavailable,unavailable
 Fix Cloudflare build and release gates,"fix the build errors:",2026-08-27T10:47:00-04:00,unavailable,unavailable
+Hardened Cloudflare release dev-tool install,"sleuth the origin of bug, solve it, harden it
+
+
+> keystone-reconciliation@1.0.0 seed
+> npm run seed --workspace @keystone/api -- --seed 424242
+
+npm warn Unknown env config ""version-git-tag"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""argv"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-commit-hooks"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-git-message"". This will stop working in the next major version of npm.
+npm warn Unknown env config ""version-tag-prefix"". This will stop working in the next major version of npm.
+
+> @keystone/api@1.0.0 seed
+> tsx src/cli/seed.ts --seed 424242
+
+sh: tsx: command not found
+npm error Lifecycle script `seed` failed with error:
+npm error code 127
+npm error path /Users/zernach/code/gt-school/backend/services/api
+npm error workspace @keystone/api@1.0.0
+npm error location /Users/zernach/code/gt-school/backend/services/api
+npm error command failed
+npm error command sh -c tsx src/cli/seed.ts --seed 424242
+Cloudflare demo release stopped: release command failed with exit status 127
+Worker: gt-school-demo-api; uploaded version: not-deployed; Pages project: gt-school; uploaded deployment: not-deployed; source SHA: 5610b43db32cf967cc331147fd27e72ad6c118ef.
+If the Worker upload completed, immediately restore its preceding active version with:
+  (cd ""/Users/zernach/code/gt-school/backend/cloudflare"" && npx --no-install wrangler rollback --name ""gt-school-demo-api"" --message ""manual rollback after failed gt-school demo release"")
+If the Pages upload completed, use Workers & Pages > gt-school > Deployments > the prior production deployment > Rollback to this deployment. Pages Direct Upload has no Wrangler rollback command.
+error Command failed with exit code 127.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-27T10:59:08-0400,unavailable,unavailable
