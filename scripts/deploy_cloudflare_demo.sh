@@ -26,6 +26,16 @@ pages_deploy_output=""
 ready_headers=""
 container_list_output=""
 container_instances_output=""
+REQUIRED_RELEASE_EXECUTABLES=(eslint tsx tsc vite vitest wrangler playwright)
+
+# Yarn Classic exports obsolete npm configuration variables to its child
+# scripts. npm 11 only warns today, but will reject them in its next major
+# version. They are Yarn implementation details, not release configuration.
+unset npm_config_argv \
+  npm_config_version_commit_hooks \
+  npm_config_version_git_message \
+  npm_config_version_git_tag \
+  npm_config_version_tag_prefix
 
 run_wrangler() {
   [[ -x "$ZPROFILE_FUNCTION_RUNNER" ]] || { echo "ZPROFILE_FUNCTION_RUNNER is not executable: $ZPROFILE_FUNCTION_RUNNER" >&2; exit 1; }
@@ -154,10 +164,13 @@ git -C "$ROOT_DIR" fetch origin main
 
 echo "Preparing Cloudflare demo release target=$DEPLOY_TARGET sha=$SOURCE_SHA"
 # This release runs source CLIs and the full test/build gate. Explicitly include
-# workspace dev dependencies so inherited production-pruning configuration
-# cannot remove tsx (or the verification tooling) after a successful npm ci.
-npm ci --include=dev --ignore-scripts
-[[ -x "$ROOT_DIR/node_modules/.bin/tsx" ]] || fail "release dependency install did not provide tsx; rerun npm ci --include=dev --ignore-scripts before retrying"
+# workspace and workspace-root dev dependencies so inherited production-pruning
+# configuration cannot remove the root linter or any verification CLI after a
+# successful npm ci.
+npm ci --include=dev --include-workspace-root --ignore-scripts
+for release_executable in "${REQUIRED_RELEASE_EXECUTABLES[@]}"; do
+  [[ -x "$ROOT_DIR/node_modules/.bin/$release_executable" ]] || fail "release dependency install did not provide $release_executable; rerun npm ci --include=dev --include-workspace-root --ignore-scripts before retrying"
+done
 npm run seed -- --seed 424242
 npm run lint
 npm run typecheck

@@ -92,7 +92,9 @@ run_release() {
 
 run_release >/dev/null
 grep -q "git fetch" "$log_file"
-grep -q "npm ci --include=dev --ignore-scripts" "$log_file"
+grep -q "npm ci --include=dev --include-workspace-root --ignore-scripts" "$log_file"
+grep -q 'REQUIRED_RELEASE_EXECUTABLES=(eslint tsx tsc vite vitest wrangler playwright)' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
+grep -q 'unset npm_config_argv' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 grep -q "npm run seed -- --seed 424242" "$log_file"
 grep -q "npm run test:cloudflare-image" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler whoami" "$log_file"
