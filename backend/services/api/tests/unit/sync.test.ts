@@ -461,8 +461,8 @@ describe('partial and failed sources', () => {
 });
 
 describe('batching and failure atomicity', () => {
-  it('batches more than 750 source records and more than 1,000 lineage rows', async () => {
-    const contacts = Array.from({ length: 751 }, (_, index) => {
+  it('batches more than 5,000 source records and more than 10,000 lineage rows', async () => {
+    const contacts = Array.from({ length: 5_001 }, (_, index) => {
       const student = makeStudent(index);
       const contact = makeContact(index, student);
       return sourceRecord('crm', 'contact', contact.crm_id, contact);
@@ -477,7 +477,7 @@ describe('batching and failure atomicity', () => {
     });
     const { pool, statements } = makePool();
     const result = await synchronize(pool, [crm, failed('app'), failed('payments')], { ...config, SOURCE_RETRY_LIMIT: 0 }, request);
-    expect(result).toMatchObject({ status: 'partial', acceptedRecords: 751 });
+    expect(result).toMatchObject({ status: 'partial', acceptedRecords: 5_001 });
     expect(statements.filter(({ sql }) => sql.includes('INSERT INTO source_records'))).toHaveLength(2);
     expect(statements.filter(({ sql }) => sql.includes('INSERT INTO field_observations')).length).toBeGreaterThan(1);
   });

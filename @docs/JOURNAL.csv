@@ -363,3 +363,97 @@ Revised coding script to foreground custom bootstrap,"the first step was the mos
 
 /Users/zernach/code/zprofile/zprofile-components/functions/bootstrap",2026-08-27T13:40:52-0400,unavailable,unavailable
 Consolidated executive coding script,"Consolidate the message from @docs/script/2-coding.md  into more condensed, impactful, powerful words. Fewer words, bigger impact. Imagine we are presenting to an executive team, who some are technical, but most are not.",2026-08-27T13:44:36-0400,unavailable,unavailable
+Optimized live acceptance sync persistence,"sleuth + solve the live acceptance tests errors in github
+
+Skip to content
+Zernach
+gt-school
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Security and quality
+Insights
+Settings
+Keystone CI
+script + title #22
+All jobs
+Run details
+Annotations
+2 errors and 1 warning
+live-acceptance
+failed 24 minutes ago in 3m 24s
+Search logs
+1s
+1s
+6s
+9s
+3s
+1m 6s
+1s
+14s
+1m 34s
+Run npm run test:integration
+
+> keystone-reconciliation@1.0.0 test:integration
+> npm run test:integration --workspace @keystone/api --
+
+
+> @keystone/api@1.0.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 /home/runner/work/gt-school/gt-school/backend/services/api
+
+ ❯ tests/integration/e2e.integration.test.ts (11 tests | 1 failed) 93266ms
+     ✓ reports process, database, queue, and all source adapters ready 45ms
+     ✓ enforces client and per-job trigger authentication 18ms
+     ✓ rejects malformed, invalid, and oversized fixture payloads with documented 4xx responses 30ms
+     × ingests exactly 120,000 source records and detects the 3,050-item golden set 51313ms
+     ✓ returns the committed hand-checked cross-source entity view 53ms
+     ✓ filters conflict data and returns field lineage without exposing a broad query scope 90ms
+     ✓ creates or deduplicates one pending-by-policy proposal per active conflict without changing the mirror  16288ms
+     ✓ runs stretch ops: groups incidents in pgvector, extracts tickets, auto-applies only eligible proposals, and keeps the source mirror unchanged  7289ms
+     ✓ does not let viewer scope decide a proposal 16ms
+     ✓ returns the same durable job for a repeated idempotency key 13ms
+     ✓ degrades a real 5xx source to a structured partial run without hanging  18107ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/e2e.integration.test.ts > live Compose vertical contract > ingests exactly 120,000 source records and detects the 3,050-item golden set
+AssertionError: expected 51057 to be less than 30000
+ ❯ tests/integration/e2e.integration.test.ts:145:24
+    143|     });
+    144|     const durationMs = Number(syncRun.result.durationMs);
+    145|     expect(durationMs).toBeLessThan(30_000);
+       |                        ^
+
+    146|     expect(120_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+Error: AssertionError: expected 51057 to be less than 30000
+0s
+0s
+0s
+0s
+0s
+0s
+5s
+0s
+0s
+Footer
+© 2026 GitHub, Inc.
+Footer navigation
+Terms
+Privacy
+Security
+Status
+Community
+Docs
+Contact
+Manage cookies
+Do not share my personal information",2026-08-27T14:07:38-0400,unavailable,unavailable

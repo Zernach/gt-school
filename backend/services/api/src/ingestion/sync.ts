@@ -47,6 +47,19 @@ interface ReadOutcome {
   latencyMs: number;
 }
 
+const SOURCE_RECORD_BATCH_SIZE = 5_000;
+const LINEAGE_BATCH_SIZE = 10_000;
+const PROJECTION_BATCH_SIZE = 5_000;
+const INVARIANT_RESULT_BATCH_SIZE = 10_000;
+
+function sourcePayloadHash(record: SourceRecord, hashes: WeakMap<SourceRecord, string>): string {
+  const existing = hashes.get(record);
+  if (existing) return existing;
+  const hash = sha256(stableStringify(record.payload));
+  hashes.set(record, hash);
+  return hash;
+}
+
 async function readBounded(adapter: ReadOnlySourceAdapter, generation: number, config: AppConfig): Promise<ReadOutcome> {
   const started = performance.now();
   let lastError: unknown;
@@ -66,16 +79,15 @@ async function readBounded(adapter: ReadOnlySourceAdapter, generation: number, c
   return { sourceKind: adapter.sourceKind, status: 'failed', errorCode: code, errorDetail: lastError instanceof Error ? lastError.message : 'source failed', latencyMs: Math.round(performance.now() - started) };
 }
 
-async function insertRecords(pool: DatabasePool, tenantId: string, snapshotId: string, records: readonly SourceRecord[]): Promise<Map<string, number>> {
-  const batchSize = 750;
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize).map((record) => ({
+async function insertRecords(pool: DatabasePool, tenantId: string, snapshotId: string, records: readonly SourceRecord[], hashes: WeakMap<SourceRecord, string>): Promise<Map<string, number>> {
+  for (let index = 0; index < records.length; index += SOURCE_RECORD_BATCH_SIZE) {
+    const batch = records.slice(index, index + SOURCE_RECORD_BATCH_SIZE).map((record) => ({
       source_kind: record.sourceKind,
       entity_kind: record.entityKind,
       source_id: record.sourceId,
       occurrence: record.occurrence,
       payload: record.payload,
-      payload_hash: sha256(stableStringify(record.payload)),
+      payload_hash: sourcePayloadHash(record, hashes),
       observed_at: record.observedAt
     }));
     await pool.query(`INSERT INTO source_records(tenant_id, snapshot_id, source_kind, entity_kind, source_id, occurrence, payload, payload_hash, observed_at)
@@ -95,7 +107,7 @@ async function insertRecords(pool: DatabasePool, tenantId: string, snapshotId: s
     if (!sourceRecordId) throw new Error(`persisted_source_record_missing:${record.sourceKind}:${record.sourceId}`);
     for (const lineage of lineageForRecord(record)) {
       lineageRows.push({ source_record_id: sourceRecordId, field_path: lineage.fieldPath, raw_value: lineage.rawValue, normalized_value: lineage.normalizedValue, normalization_version: lineage.version, transformation_trace: lineage.trace, source_observed_at: record.observedAt });
-      if (lineageRows.length >= 1000) {
+      if (lineageRows.length >= LINEAGE_BATCH_SIZE) {
         await insertLineage(pool, tenantId, lineageRows.splice(0));
       }
     }
@@ -124,15 +136,15 @@ function fixtureSetFromSnapshots(snapshots: readonly SourceSnapshot[]): FixtureS
 
 async function persistProjection(pool: DatabasePool, tenantId: string, fixtures: FixtureSet, recordIds: ReadonlyMap<string, number>): Promise<void> {
   const projection = buildCanonicalProjection(fixtures);
-  for (let index = 0; index < projection.entities.length; index += 750) {
-    const batch = projection.entities.slice(index, index + 750).map((entity) => ({ id: entity.id, entity_kind: entity.entityKind, display_name: entity.displayName, resolution_status: entity.resolutionStatus, match_method: entity.matchMethod, match_score_bp: entity.matchScoreBp, summary: entity.summary }));
+  for (let index = 0; index < projection.entities.length; index += PROJECTION_BATCH_SIZE) {
+    const batch = projection.entities.slice(index, index + PROJECTION_BATCH_SIZE).map((entity) => ({ id: entity.id, entity_kind: entity.entityKind, display_name: entity.displayName, resolution_status: entity.resolutionStatus, match_method: entity.matchMethod, match_score_bp: entity.matchScoreBp, summary: entity.summary }));
     await pool.query(`INSERT INTO canonical_entities(id, tenant_id, entity_kind, display_name, resolution_status, match_method, match_score_bp, summary)
       SELECT row.id, $1, row.entity_kind, row.display_name, row.resolution_status, row.match_method, row.match_score_bp, row.summary
       FROM jsonb_to_recordset($2::jsonb) AS row(id text, entity_kind text, display_name text, resolution_status text, match_method text, match_score_bp integer, summary jsonb)
       ON CONFLICT (tenant_id, id) DO UPDATE SET entity_kind = EXCLUDED.entity_kind, display_name = EXCLUDED.display_name, resolution_status = EXCLUDED.resolution_status, match_method = EXCLUDED.match_method, match_score_bp = EXCLUDED.match_score_bp, summary = EXCLUDED.summary, updated_at = now()`, [tenantId, JSON.stringify(batch)]);
   }
-  for (let index = 0; index < projection.households.length; index += 750) {
-    const batch = projection.households.slice(index, index + 750);
+  for (let index = 0; index < projection.households.length; index += PROJECTION_BATCH_SIZE) {
+    const batch = projection.households.slice(index, index + PROJECTION_BATCH_SIZE);
     await pool.query(`INSERT INTO households(id, tenant_id, guardian_email_hash)
       SELECT row.id, $1, row.guardian_email_hash FROM jsonb_to_recordset($2::jsonb) AS row(id text, guardian_email_hash text)
       ON CONFLICT (tenant_id, id) DO UPDATE SET guardian_email_hash = EXCLUDED.guardian_email_hash`, [tenantId, JSON.stringify(batch.map(({ id, guardianEmailHash }) => ({ id, guardian_email_hash: guardianEmailHash })))]);
@@ -145,11 +157,11 @@ async function persistProjection(pool: DatabasePool, tenantId: string, fixtures:
     const recordId = recordIds.get(`${link.sourceKind}:${link.entityKind}:${link.sourceId}`);
     return recordId ? [{ canonical_entity_id: link.canonicalId, source_record_id: recordId, match_method: link.matchMethod, match_score_bp: link.matchScoreBp, evidence: link.evidence }] : [];
   });
-  for (let index = 0; index < links.length; index += 1000) {
+  for (let index = 0; index < links.length; index += PROJECTION_BATCH_SIZE) {
     await pool.query(`INSERT INTO entity_links(tenant_id, canonical_entity_id, source_record_id, match_method, match_score_bp, evidence, rule_version)
       SELECT $1, row.canonical_entity_id, row.source_record_id, row.match_method, row.match_score_bp, row.evidence, 'identity-v1'
       FROM jsonb_to_recordset($2::jsonb) AS row(canonical_entity_id text, source_record_id bigint, match_method text, match_score_bp integer, evidence jsonb)
-      ON CONFLICT (tenant_id, source_record_id) DO NOTHING`, [tenantId, JSON.stringify(links.slice(index, index + 1000))]);
+      ON CONFLICT (tenant_id, source_record_id) DO NOTHING`, [tenantId, JSON.stringify(links.slice(index, index + PROJECTION_BATCH_SIZE))]);
   }
 }
 
@@ -175,7 +187,7 @@ async function persistInvariants(pool: DatabasePool, tenantId: string, syncRunId
     for (const ruleId of ruleIds) {
       const conflict = conflictByRuleAndStudent.get(`${ruleId}:${entityRef}`);
       rows.push({ rule_id: ruleId, entity_ref: entityRef, verdict: conflict ? 'fail' : 'pass', evidence: conflict?.evidence ?? {}, conflict_key: conflict?.conflict_key ?? null, reason: null });
-      if (rows.length >= 2000) await flush();
+      if (rows.length >= INVARIANT_RESULT_BATCH_SIZE) await flush();
     }
   }
   const studentConflictKeys = new Set(conflictByRuleAndStudent.values());
@@ -237,26 +249,30 @@ export async function synchronize(pool: DatabasePool, adapters: readonly ReadOnl
     ON CONFLICT (tenant_id, idempotency_key) DO UPDATE SET status = 'running', started_at = COALESCE(sync_runs.started_at, now())`, [runId, request.tenantId, request.requestId, request.idempotencyKey, request.generation]);
   const outcomes = await Promise.all(adapters.map((adapter) => readBounded(adapter, request.generation, config)));
   const availability = Object.fromEntries(outcomes.map(({ sourceKind, status }) => [sourceKind, status])) as Record<SourceKind, Availability>;
-  const recordIds = new Map<string, number>();
-  const completeSnapshotIds = new Map<SourceKind, string>();
-  let acceptedRecords = 0;
-  for (const outcome of outcomes) {
+  const payloadHashes = new WeakMap<SourceRecord, string>();
+  const persistedOutcomes = await Promise.all(outcomes.map(async (outcome) => {
     const sourceRunId = stableUuid(`source-run:${runId}:${outcome.sourceKind}`);
     const snapshotId = stableUuid(`snapshot:${sourceRunId}:${request.generation}`);
     await pool.query(`INSERT INTO source_runs(id, sync_run_id, tenant_id, source_kind, generation, status, accepted_count, rejected_count, latency_ms, error_code, error_detail, completed_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
       ON CONFLICT (sync_run_id, source_kind) DO UPDATE SET status = EXCLUDED.status, accepted_count = EXCLUDED.accepted_count, rejected_count = EXCLUDED.rejected_count, latency_ms = EXCLUDED.latency_ms, error_code = EXCLUDED.error_code, error_detail = EXCLUDED.error_detail, completed_at = now()`, [sourceRunId, runId, request.tenantId, outcome.sourceKind, request.generation, outcome.status, outcome.snapshot?.records.length ?? 0, outcome.snapshot?.rejectedCount ?? 0, outcome.latencyMs, outcome.errorCode ?? null, outcome.errorDetail ?? null]);
-    if (!outcome.snapshot) continue;
-    const snapshotHash = sha256(outcome.snapshot.records.map(({ payload }) => sha256(stableStringify(payload))).sort().join(''));
+    if (!outcome.snapshot) return { outcome, snapshotId, sourceRecordIds: new Map<string, number>() };
+    const snapshotHash = sha256(outcome.snapshot.records.map((record) => sourcePayloadHash(record, payloadHashes)).sort().join(''));
     await pool.query(`INSERT INTO source_snapshots(id, source_run_id, tenant_id, source_kind, generation, adapter_version, schema_version, status, accepted_count, rejected_count, payload_hash, completed_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
       ON CONFLICT (tenant_id, source_kind, generation, source_run_id) DO UPDATE SET status = EXCLUDED.status, accepted_count = EXCLUDED.accepted_count, rejected_count = EXCLUDED.rejected_count, payload_hash = EXCLUDED.payload_hash, completed_at = now()`, [snapshotId, sourceRunId, request.tenantId, outcome.sourceKind, request.generation, outcome.snapshot.adapterVersion, outcome.snapshot.schemaVersion, outcome.status === 'complete' ? 'complete' : 'partial', outcome.snapshot.records.length, outcome.snapshot.rejectedCount, snapshotHash]);
-    if (outcome.status === 'complete') {
-      const sourceRecordIds = await insertRecords(pool, request.tenantId, snapshotId, outcome.snapshot.records);
-      for (const [key, id] of sourceRecordIds) recordIds.set(key, id);
-      completeSnapshotIds.set(outcome.sourceKind, snapshotId);
-      acceptedRecords += outcome.snapshot.records.length;
-    }
+    if (outcome.status !== 'complete') return { outcome, snapshotId, sourceRecordIds: new Map<string, number>() };
+    const sourceRecordIds = await insertRecords(pool, request.tenantId, snapshotId, outcome.snapshot.records, payloadHashes);
+    return { outcome, snapshotId, sourceRecordIds };
+  }));
+  const recordIds = new Map<string, number>();
+  const completeSnapshotIds = new Map<SourceKind, string>();
+  let acceptedRecords = 0;
+  for (const { outcome, snapshotId, sourceRecordIds } of persistedOutcomes) {
+    if (outcome.status !== 'complete' || !outcome.snapshot) continue;
+    for (const [key, id] of sourceRecordIds) recordIds.set(key, id);
+    completeSnapshotIds.set(outcome.sourceKind, snapshotId);
+    acceptedRecords += outcome.snapshot.records.length;
   }
   const completeSnapshots = outcomes.flatMap(({ status, snapshot }) => status === 'complete' && snapshot ? [snapshot] : []);
   let conflictCount = 0;
@@ -264,7 +280,7 @@ export async function synchronize(pool: DatabasePool, adapters: readonly ReadOnl
   const allComplete = (['crm', 'app', 'payments'] as const).every((source) => availability[source] === 'complete');
   if (allComplete) {
     const fixtures = fixtureSetFromSnapshots(completeSnapshots);
-    mirrorHash = sha256(completeSnapshots.flatMap(({ records }) => records.map(({ payload }) => sha256(stableStringify(payload)))).sort().join(''));
+    mirrorHash = sha256(completeSnapshots.flatMap(({ records }) => records.map((record) => sourcePayloadHash(record, payloadHashes))).sort().join(''));
     await persistProjection(pool, request.tenantId, fixtures, recordIds);
     const evaluation = evaluateInvariants(fixtures, availability);
     conflictCount = evaluation.conflicts.length;
