@@ -76,6 +76,9 @@ chmod +x "$tmp_dir/bin/git" "$tmp_dir/bin/npm" "$tmp_dir/bin/curl" "$tmp_dir/bin
 log_file="$tmp_dir/commands.log"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/bootstrap_cloudflare_pages.sh"
 grep -q 'ZPROFILE_FUNCTION_RUNNER="${ZPROFILE_FUNCTION_RUNNER:-$HOME/code/zprofile/zprofile-run-function.zsh}"' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
+grep -q '^CONTAINER_PLATFORM=linux/amd64$' "$ROOT_DIR/scripts/test-cloudflare-image.sh"
+grep -q 'docker build --platform "\$CONTAINER_PLATFORM"' "$ROOT_DIR/scripts/test-cloudflare-image.sh"
+grep -q 'docker run --platform "\$CONTAINER_PLATFORM"' "$ROOT_DIR/scripts/test-cloudflare-image.sh"
 run_release() {
     : >"$tmp_dir/ready-counter"
     : >"$tmp_dir/container-counter"

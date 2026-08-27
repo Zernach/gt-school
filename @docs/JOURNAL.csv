@@ -349,3 +349,7 @@ If the Pages upload completed, use Workers & Pages > gt-school > Deployments > t
 error Command failed with exit code 127.
 info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
 zernach@Ryans-MacBook-Pro-485 gt-school %",2026-08-27T10:59:08-0400,unavailable,unavailable
+Aligned Cloudflare image platform,"align the image platform warning that occurs when deploying frontend
+
+=> => naming to docker.io/library/keystone-cloudflare-demo  0.0s
+WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested",2026-08-27T11:16:38-04:00,unavailable,unavailable

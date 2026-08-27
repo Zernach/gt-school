@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONTAINER_PLATFORM=linux/amd64
 image_tag="keystone-cloudflare-demo:test"
 container_name="keystone-cloudflare-demo-test-$$"
 container_id=""
@@ -11,9 +12,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker build --platform linux/amd64 --tag "$image_tag" --file "$ROOT_DIR/backend/cloudflare/Dockerfile" "$ROOT_DIR"
+docker build --platform "$CONTAINER_PLATFORM" --tag "$image_tag" --file "$ROOT_DIR/backend/cloudflare/Dockerfile" "$ROOT_DIR"
 [[ "$(docker image inspect "$image_tag" --format '{{.Architecture}}')" == "amd64" ]] || { echo "cloudflare image must be linux/amd64" >&2; exit 1; }
-container_id="$(docker run --detach --publish 127.0.0.1::8080 --name "$container_name" "$image_tag")"
+container_id="$(docker run --platform "$CONTAINER_PLATFORM" --detach --publish 127.0.0.1::8080 --name "$container_name" "$image_tag")"
 
 refresh_base_url() {
   # Docker Desktop may recreate the test container or republish its ephemeral
