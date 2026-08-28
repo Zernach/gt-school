@@ -967,3 +967,6 @@ do not test the full dataset, but only 10% of it. We should not be fixing github
 
 continue to completion and all tests pass",2026-08-27T21:03:26-04:00,unavailable,unavailable
 Restore home-screen accordions,"go back in previous commits and restore the accordions on the home screen",2026-08-27T21:43:37-04:00,unavailable,unavailable
+Fix Pages deployment acceptance failure,"fix the error when trying to deploy the frontend
+
+The Cloudflare Pages upload completed, but the post-deploy Playwright gate failed because the Proposal results list and Review state control were not visible after the new dashboard accordion behavior. The release stopped with exit status 1.",2026-08-27T21:53:27-04:00,unavailable,unavailable

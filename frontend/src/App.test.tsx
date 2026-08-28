@@ -157,7 +157,7 @@ describe('dashboard loading states', () => {
     expect(screen.getAllByText(/Loading|Checking/u).every((element) => element.closest('[aria-busy="true"]') !== null)).toBe(true);
   });
 
-  it('allows the proposal queue to be reopened after loading is replaced with results', async () => {
+  it('keeps the proposal queue open when loading is replaced with results', async () => {
     let resolveProposals: ((proposals: ReturnType<typeof proposalFixture>[]) => void) | undefined;
     mockedGetProposals.mockImplementation(() => new Promise((resolve) => { resolveProposals = resolve; }));
     const user = userEvent.setup();
@@ -168,8 +168,8 @@ describe('dashboard loading states', () => {
 
     await act(async () => resolveProposals?.([proposalFixture()]));
 
-    await user.click(screen.getByRole('button', { name: 'Expand Decide what to record' }));
     expect(await screen.findByRole('combobox', { name: 'Review state' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Collapse Decide what to record' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('region', { name: 'Decide what to record' })).toBeVisible();
   });
 
