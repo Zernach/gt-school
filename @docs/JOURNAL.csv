@@ -970,3 +970,10 @@ Restore home-screen accordions,"go back in previous commits and restore the acco
 Fix Pages deployment acceptance failure,"fix the error when trying to deploy the frontend
 
 The Cloudflare Pages upload completed, but the post-deploy Playwright gate failed because the Proposal results list and Review state control were not visible after the new dashboard accordion behavior. The release stopped with exit status 1.",2026-08-27T21:53:27-04:00,unavailable,unavailable
+Add linked demo thumbnail,"<image name=[Image #1] path=""/var/folders/_h/l4g0b4vd73d0ltrvzxy03cp80000gn/T/codex-clipboard-jxvEZt.png"">[Image #1]</image>
+
+add this image to top of readme with a link to the video
+
+[Image #1]
+
+https://drive.google.com/drive/folders/1vYyzeiYaBPl1WWg25xiLa8yBl6ovI8Je?usp=drive_link",2026-08-27T22:09:35-04:00,unavailable,unavailable

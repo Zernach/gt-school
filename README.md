@@ -1,5 +1,7 @@
 # Keystone
 
+[![Watch the Keystone demo video](@docs/images/keystone-demo-video-thumbnail.png)](https://drive.google.com/drive/folders/1vYyzeiYaBPl1WWg25xiLa8yBl6ovI8Je?usp=drive_link)
+
 Keystone is a synthetic reconciliation trust layer for CRM, application, and payment data. It ingests sources read-only, preserves field-level lineage, evaluates deterministic invariants, and creates auditable, reviewer-gated remediation proposals.
 
 **Live frontend:** [gt-school.pages.dev](https://gt-school.pages.dev)
