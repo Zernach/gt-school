@@ -44,7 +44,7 @@ test.describe('production dashboard', () => {
     expect(Buffer.from(await favicon.body()).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
 
     await loadDashboard(page);
-    await expect(page.getByText('Active conflicts').locator('..').getByText('3,050')).toBeVisible();
+    await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
     await expect(page.getByText('source writes: zero')).toBeVisible();
     await expect(page.getByLabel('Source freshness').getByText('CRM')).toBeVisible();
     await expect(page.getByLabel('Source freshness').getByText('APP')).toBeVisible();

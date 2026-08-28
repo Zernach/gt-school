@@ -40,12 +40,12 @@ describe('client authentication', () => {
 describe('overview query', () => {
   it('runs tenant-scoped queries and preserves dashboard accounting', async () => {
     const responses = [
-      { rows: [{ source_kind: 'crm', accepted_count: 55_000 }] },
-      { rows: [{ active: '3050', resolved: '0', oscillation_hold: '0' }] },
-      { rows: [{ status: 'pending', count: 3050 }] },
-      { rows: [{ status: 'complete', summary: { fail: 3050 } }] },
+      { rows: [{ source_kind: 'crm', accepted_count: 5_500 }] },
+      { rows: [{ active: '305', resolved: '0', oscillation_hold: '0' }] },
+      { rows: [{ status: 'pending', count: 305 }] },
+      { rows: [{ status: 'complete', summary: { fail: 305 } }] },
       { rows: [{ cap_microcents: '100', reserved_microcents: '50', actual_microcents: '50', released_microcents: '0' }] },
-      { rows: [{ id: 'sync-id', status: 'complete', summary: { acceptedRecords: 55_000 } }] },
+      { rows: [{ id: 'sync-id', status: 'complete', summary: { acceptedRecords: 5_500 } }] },
       { rows: [{ groups: 12, members: 40 }] },
       { rows: [{ tickets: 40 }] },
       { rows: [{ alert_type: 'spend_cap_reached', severity: 'critical', message: 'daily cap reached', created_at: '2026-01-15T12:00:00.000Z' }] }
@@ -64,9 +64,9 @@ describe('overview query', () => {
       reconciliation: {
         ok: true,
         checks: [
-          { name: 'ingestion_matches_active_snapshots', actual: 55_000, expected: 55_000, ok: true },
-          { name: 'conflicts_match_invariant_fail', actual: 3050, expected: 3050, ok: true },
-          { name: 'pending_proposals_within_active_conflicts', actual: 3050, expected: 3050, ok: true },
+          { name: 'ingestion_matches_active_snapshots', actual: 5_500, expected: 5_500, ok: true },
+          { name: 'conflicts_match_invariant_fail', actual: 305, expected: 305, ok: true },
+          { name: 'pending_proposals_within_active_conflicts', actual: 305, expected: 305, ok: true },
           { name: 'spend_within_daily_cap', actual: 50, expected: 100, ok: true }
         ]
       },
@@ -89,12 +89,12 @@ describe('overview query', () => {
 
   it('reconciles windowed dashboard figures against windowed invariant-fail logs', async () => {
     const query = vi.fn().mockResolvedValue({ rows: [], rowCount: 0 });
-    query.mockResolvedValueOnce({ rows: [{ accepted_count: 120_000 }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ accepted_count: 12_000 }], rowCount: 1 });
     query.mockResolvedValueOnce({ rows: [{ active: '12', resolved: '0', oscillation_hold: '0' }], rowCount: 1 });
     query.mockResolvedValueOnce({ rows: [{ status: 'pending', count: 12 }], rowCount: 1 });
-    query.mockResolvedValueOnce({ rows: [{ summary: { fail: 3050 }, windowed_fail: 12 }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ summary: { fail: 305 }, windowed_fail: 12 }], rowCount: 1 });
     query.mockResolvedValueOnce({ rows: [{ cap_microcents: '100', reserved_microcents: '10', actual_microcents: '10', released_microcents: '0' }], rowCount: 1 });
-    query.mockResolvedValueOnce({ rows: [{ summary: { acceptedRecords: 120_000 } }], rowCount: 1 });
+    query.mockResolvedValueOnce({ rows: [{ summary: { acceptedRecords: 12_000 } }], rowCount: 1 });
     const overview = await getOverview(pool(query), tenantId, { from: '2026-01-15T00:00:00.000Z' });
     expect(overview.reconciliation).toMatchObject({
       ok: true,

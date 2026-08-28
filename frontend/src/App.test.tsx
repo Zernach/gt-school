@@ -47,8 +47,9 @@ async function renderLoadedApp() {
 }
 
 describe('dashboard shell', () => {
-  it('identifies Keystone and the reconciliation trust layer', async () => {
+  it('identifies GT School as the Keystone reconciliation trust-layer owner', async () => {
     await renderLoadedApp();
+    expect(screen.getByRole('img', { name: 'GT School' })).toHaveAttribute('src', '/gt-school-logo.png');
     expect(screen.getByRole('heading', { level: 1, name: 'Keystone' })).toBeInTheDocument();
     expect(screen.getByText('Reconciliation trust layer')).toBeInTheDocument();
   });
@@ -298,7 +299,7 @@ describe('conflict evidence interactions', () => {
   it('explains the result and offers task-oriented review shortcuts', async () => {
     await renderLoadedApp();
     expect(screen.getByText('02 · Investigate')).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Invariant evidence status' })).toHaveTextContent(/3,050 deterministic rule failures/u);
+    expect(screen.getByRole('status', { name: 'Invariant evidence status' })).toHaveTextContent(/305 deterministic rule failures/u);
     expect(screen.getByText(/Unchecked is not clean/u)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Active failures' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('region', { name: 'Results summary' })).toHaveTextContent('2 conflicts on this page · more results available');

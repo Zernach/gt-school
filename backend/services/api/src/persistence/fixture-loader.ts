@@ -26,6 +26,11 @@ async function insertBatches<T>(rows: readonly T[], size: number, insert: (batch
 
 export async function loadAppSourceFixtures(pool: DatabasePool, fixtureRoot: string, seed: number): Promise<void> {
   const manifest = JSON.parse(await readFile(join(fixtureRoot, 'manifest.json'), 'utf8')) as unknown;
+  // A fixture profile is authoritative for its synthetic seed. Removing rows
+  // that no longer occur in a reduced profile prevents a prior larger local
+  // seed from inflating the next sync or deployment verification.
+  await pool.query('DELETE FROM source_app.enrollments WHERE seed = $1', [seed]);
+  await pool.query('DELETE FROM source_app.students WHERE seed = $1', [seed]);
   for (const generation of [1, 2, 3]) {
     const fixtures = await loadFixtureSet(fixtureRoot, generation);
     const students: StudentRow[] = fixtures.appStudents.map((payload) => ({ source_id: payload.id, payload, payload_hash: sha256(stableStringify(payload)), observed_at: payload.updated_at }));

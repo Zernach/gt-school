@@ -144,7 +144,7 @@ describe('conflict detail', () => {
     expect(within(section).getByText('Proposal Created')).toBeInTheDocument();
     expect(within(section).getByText(/system:sync/u)).toBeInTheDocument();
     expect(within(section).getByText(/system:reconciler/u)).toBeInTheDocument();
-    expect(within(section).getByText(/Accepted 120000/u)).toBeInTheDocument();
+    expect(within(section).getByText(/Accepted 12000/u)).toBeInTheDocument();
     expect(within(section).getByText(/Cost Microcents 2/u)).toBeInTheDocument();
   });
 

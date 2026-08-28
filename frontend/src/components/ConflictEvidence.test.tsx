@@ -9,7 +9,7 @@ describe('conflict evidence workspace', () => {
   it('explains the evidence, summarizes the run, and gives a review path', () => {
     render(<ConflictEvidence overview={overviewFixture()} filters={EMPTY_FILTERS} visibleCount={2} hasNextPage={true} disabled={false} onPreset={vi.fn()} />);
     const status = screen.getByRole('status', { name: 'Invariant evidence status' });
-    expect(within(status).getByText(/3,050 deterministic rule failures/u)).toBeInTheDocument();
+    expect(within(status).getByText(/305 deterministic rule failures/u)).toBeInTheDocument();
     expect(screen.getByText(/Unchecked is not clean/u)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Results summary' })).toHaveTextContent('2 conflicts on this page · more results available');
   });

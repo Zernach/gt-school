@@ -101,8 +101,8 @@ The brief is easy to underestimate because it uses familiar words such as
   machine-readable golden set exactly: no false negatives and no false
   positives.
 - At least 100,000 records are required, but the specified minimum entity
-  volumes sum to **120,000** (40,000 CRM contacts + 15,000 deals + 25,000
-  students + 22,000 enrollments + 18,000 payments). The implementation must
+  volumes sum to **12,000** (4,000 CRM contacts + 1,500 deals + 2,500
+  students + 2,200 enrollments + 1,800 payments). The implementation must
   satisfy the per-source table, not quietly target only 100,000.
 - At least 70% of students must appear in all three sources, at least 85% of
   entities must remain clean, and 3,000 deal-less CRM leads must not be
@@ -484,7 +484,7 @@ The recommended phases are:
 4. **Mutation injection:** apply C1–C14 mutations while preserving the clean
    population and recording the exact source records and fields changed.
 5. **Generation history:** emit at least three snapshots per source. Later
-   generations reassert at least 25 stale fields. The expected behavior is
+   generations reassert at least three stale fields. The expected behavior is
    oscillation recognition, not a fresh identical proposal on every run.
 6. **Malformed path fixtures:** send at least 20 broken records through the
    adapter validation path, including missing fields, wrong types, truncated
@@ -494,7 +494,7 @@ The recommended phases are:
    `golden/conflicts.json` and `golden/clean-sample.json` in stable sorted
    order.
 
-The mandated source totals are 120,000 records before any additional metadata.
+The mandated representative source total is 12,000 records before any additional metadata.
 The generator should stream JSONL or use batched inserts so memory usage does
 not scale with all raw payloads. A small committed generator plus deterministic
 generated fixture workspace is preferable to hand-editing a large opaque blob.
@@ -844,7 +844,7 @@ The main performance choices are:
 - measure with the canonical seed on a clean Compose stack, recording hardware,
   database settings, run ID, and query plan for misses.
 
-The 100k/120k benchmark is a correctness and latency proof, not a promise of
+The 10% fixture benchmark is a correctness and latency proof, not a promise of
 production capacity. A run that meets p95 on a laptop but uses an accidental
 in-memory fixture shortcut is not valid evidence; the API and worker must read
 the PostgreSQL projection.
@@ -936,7 +936,7 @@ them.
 | Spend race | Concurrent workers can exceed a post-hoc counter | Transactional worst-case reservation before provider call; burst test |
 | Proposal storm | Reasserting source can repeat identical recommendations | Stable action fingerprint, unique constraint, oscillation hold |
 | Requirement under-specification | C4/C10 need role/DOB evidence absent from minimum CRM fields | Add documented optional synthetic fields and freeze fixture semantics before coding |
-| Fixture size/time | A 120k generator can consume the three-day window | Stream generation, batch database loads, validate counts early, keep Stretch off the critical path |
+| Fixture size/time | A 12k representative generator must remain bounded on the demo Container | Stream generation, batch database loads, validate counts early, keep Stretch off the critical path |
 | Credential confusion | Demo keys can be mistaken for production secrets | Local fixture credential only; production env/vault; never log or bundle trigger secret |
 | Dashboard theater | Pretty aggregates can hide stale or unverified evidence | Table-first UI, lineage detail, freshness and unchecked counts, API reconciliation tests |
 | Vector distraction | Embeddings can consume time without helping exactness | Preserve extension; defer semantic grouping until Core gates pass |

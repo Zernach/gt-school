@@ -69,9 +69,9 @@ async function start(type) {
 }
 
 const sync = await start('sync');
-if (sync.result.acceptedRecords !== 120000 || sync.result.conflicts !== 3050) throw new Error(`unexpected_sync_totals:${JSON.stringify(sync.result)}`);
+if (sync.result.acceptedRecords !== 12000 || sync.result.conflicts !== 305) throw new Error(`unexpected_sync_totals:${JSON.stringify(sync.result)}`);
 const reconcile = await start('reconcile');
-if (reconcile.result.conflictCount !== 3050) throw new Error(`unexpected_reconcile_totals:${JSON.stringify(reconcile.result)}`);
+if (reconcile.result.conflictCount !== 305) throw new Error(`unexpected_reconcile_totals:${JSON.stringify(reconcile.result)}`);
 const proposals = await envelope('/api/v1/proposals?status=pending&limit=1', { headers: { 'x-keystone-client-key': reviewer } });
 if (proposals.length !== 1) throw new Error('no_pending_proposal');
 const reviewedProposalId = proposals[0].id;
@@ -106,7 +106,7 @@ const body = await response.json();
 if (!response.ok || body.data.length !== 0) throw new Error('review_state_survived_restart');
 const overview = await fetch(`${process.env.API_BASE_URL}/api/v1/overview`, { headers });
 const overviewBody = await overview.json();
-if (!overview.ok || overviewBody.data.conflicts.active !== '3050') throw new Error(`baseline_not_restored:${JSON.stringify(overviewBody)}`);
+if (!overview.ok || overviewBody.data.conflicts.active !== '305') throw new Error(`baseline_not_restored:${JSON.stringify(overviewBody)}`);
 NODE
 
 echo "cloudflare all-in-one image reset verification passed"

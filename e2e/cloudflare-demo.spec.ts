@@ -8,7 +8,7 @@ test.describe('deployed Cloudflare demo', () => {
   test('loads through the Pages proxy and records a proposal hold from the dashboard', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
-    await expect(page.getByText('Active conflicts').locator('..').getByText('3,050')).toBeVisible();
+    await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
 
     const queue = page.getByRole('region', { name: 'Decide what to record' });
     await queue.getByRole('button', { name: 'Expand Decide what to record' }).click();

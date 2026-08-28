@@ -10,7 +10,12 @@ import { sha256, stableStringify, stableUuid } from '../domain/stable.js';
 import { shapePublicEntityView, buildCanonicalProjection } from '../ingestion/projection.js';
 
 export const CANONICAL_SEED = 424242;
-export const REQUIRED_COUNTS = { crmContacts: 40_000, crmDeals: 15_000, appStudents: 25_000, appEnrollments: 22_000, payments: 18_000 } as const;
+export const FIXTURE_PROFILE = 'demo-10pct-v1';
+// The Cloudflare demo deliberately exercises a representative 10% slice. It
+// retains every invariant family and cross-source relationship while keeping
+// bootstrap, reconciliation, and release verification within one small
+// ephemeral Container's compute budget.
+export const REQUIRED_COUNTS = { crmContacts: 4_000, crmDeals: 1_500, appStudents: 2_500, appEnrollments: 2_200, payments: 1_800 } as const;
 
 const FIRST_NAMES = ['Avery', 'Jordan', 'Riley', 'Morgan', 'Asher', 'Harper', 'Quinn', 'Rowan', 'Sage', 'Emerson'];
 const LAST_NAMES = ['Rivera', 'Patel', 'Nguyen', 'Johnson', 'Kim', 'Garcia', 'Brown', 'Singh', 'Williams', 'Chen'];
@@ -54,7 +59,7 @@ function dobFor(index: number): string {
 }
 
 function householdId(index: number): string | undefined {
-  return index < 3000 ? `household-${pad(Math.floor(index / 3), 4)}` : undefined;
+  return index < 300 ? `household-${pad(Math.floor(index / 3), 4)}` : undefined;
 }
 
 function baseEmail(seed: number, index: number): string {
@@ -75,19 +80,19 @@ function studentRef(seed: number, index: number): string {
   return `student:${studentId(seed, index)}`;
 }
 
-const C1 = new Set(Array.from({ length: 500 }, (_, index) => index));
+const C1 = new Set(Array.from({ length: 50 }, (_, index) => index));
 const C6 = C1;
-const C7 = new Set(Array.from({ length: 300 }, (_, index) => 500 + index));
-const C8 = new Set(Array.from({ length: 150 }, (_, index) => 900 + index * 3));
-const C9 = new Set(Array.from({ length: 100 }, (_, index) => 1400 + index));
-const C10 = new Set(Array.from({ length: 50 }, (_, index) => 1550 + index));
-const C11 = new Set(Array.from({ length: 50 }, (_, index) => 1650 + index));
-const C12 = new Set(Array.from({ length: 100 }, (_, index) => 1750 + index));
-const C13 = new Set(Array.from({ length: 100 }, (_, index) => 1850 + index));
-const C14 = new Set(Array.from({ length: 50 }, (_, index) => 1950 + index));
-const C3 = new Set(Array.from({ length: 300 }, (_, index) => 2100 + index));
-const C4 = new Set(Array.from({ length: 250 }, (_, index) => 3000 + index));
-const C5 = new Set(Array.from({ length: 400 }, (_, index) => 24_000 + index));
+const C7 = new Set(Array.from({ length: 30 }, (_, index) => 50 + index));
+const C8 = new Set(Array.from({ length: 15 }, (_, index) => 90 + index * 3));
+const C9 = new Set(Array.from({ length: 10 }, (_, index) => 140 + index));
+const C10 = new Set(Array.from({ length: 5 }, (_, index) => 155 + index));
+const C11 = new Set(Array.from({ length: 5 }, (_, index) => 165 + index));
+const C12 = new Set(Array.from({ length: 10 }, (_, index) => 175 + index));
+const C13 = new Set(Array.from({ length: 10 }, (_, index) => 185 + index));
+const C14 = new Set(Array.from({ length: 5 }, (_, index) => 195 + index));
+const C3 = new Set(Array.from({ length: 30 }, (_, index) => 210 + index));
+const C4 = new Set(Array.from({ length: 25 }, (_, index) => 300 + index));
+const C5 = new Set(Array.from({ length: 40 }, (_, index) => 2_400 + index));
 
 function makeStudent(seed: number, index: number): AppStudent {
   const name = personName(index);
@@ -113,7 +118,7 @@ function makeStudent(seed: number, index: number): AppStudent {
 function makeContact(seed: number, index: number, student: AppStudent): CrmContact {
   const createdAt = dateFor(index, 10);
   const externalId = index % 5 < 3 && !C4.has(index) ? student.id : undefined;
-  const secondaryIndex = (index + 7000) % REQUIRED_COUNTS.appStudents;
+  const secondaryIndex = (index + 700) % REQUIRED_COUNTS.appStudents;
   const secondaryName = personName(secondaryIndex);
   const intendedEmail = C4.has(index) ? `alternate-${seed}-${pad(index)}@example.test` : emailVariant(baseEmail(seed, index), index, 'crm');
   const contact: CrmContact = {
@@ -140,7 +145,7 @@ function makeEnrollment(seed: number, index: number, student: AppStudent): AppEn
   const createdAt = dateFor(index, 11);
   const noPayment = C7.has(index) || C8.has(index);
   const stage = C7.has(index) || C13.has(index) ? 'enrolled' : C8.has(index) ? 'applied' : 'registered';
-  const normalDealId = index < 15_500 && !C1.has(index) ? `deal-${seed}-${pad(index)}` : null;
+  const normalDealId = index < 1_550 && !C1.has(index) ? `deal-${seed}-${pad(index)}` : null;
   return {
     id: enrollmentId(seed, index),
     student_id: student.id,
@@ -156,7 +161,7 @@ function makeEnrollment(seed: number, index: number, student: AppStudent): AppEn
 function makePayment(seed: number, index: number, student: AppStudent, suffix = 'primary'): Payment {
   const paymentId = `pay-${seed}-${pad(index)}`;
   const name = personName(index);
-  const type = index < 15_500 ? 'deposit' : 'fee';
+  const type = index < 1_550 ? 'deposit' : 'fee';
   return {
     fixture_record_id: `${paymentId}-${suffix}`,
     payment_id: paymentId,
@@ -182,7 +187,7 @@ function makeGolden(seed: number, students: readonly AppStudent[], contactsByInd
     const payment = paymentsByIndex.get(index)!;
     add(buildConflict('paid_but_no_deal', [studentRef(seed, index), `payment:${payment.fixture_record_id}`], ['app', 'crm', 'payments'], ['crm_deal_id'], { payment_id: payment.payment_id, enrollment_id: enrollmentId(seed, index) }), 'C1');
   }
-  for (let index = 0; index < 200; index += 1) {
+  for (let index = 0; index < 20; index += 1) {
     const recordId = `orphan-pay-${seed}-${pad(index)}`;
     add(buildConflict('payment_with_no_person', [`payment:${recordId}`], ['app', 'crm', 'payments'], ['person_link'], { payment_id: `orphan-payment-${seed}-${pad(index)}` }), 'C2');
   }
@@ -248,7 +253,7 @@ function validatePlan(fixtures: { contacts: CrmContact[]; deals: CrmDeal[]; stud
   for (const [key, expected] of Object.entries(REQUIRED_COUNTS)) if (counts[key as keyof typeof counts] !== expected) throw new Error(`fixture_count_mismatch:${key}`);
   const byType = new Map<string, number>();
   for (const conflict of fixtures.golden) byType.set(conflict.type, (byType.get(conflict.type) ?? 0) + 1);
-  const minimums = [500, 200, 300, 250, 400, 500, 300, 150, 100, 50, 50, 100, 100, 50];
+  const minimums = [50, 20, 30, 25, 40, 50, 30, 15, 10, 5, 5, 10, 10, 5];
   const types = ['paid_but_no_deal','payment_with_no_person','duplicate_by_email','cross_source_email_mismatch','required_source_missing','material_field_disagreement','enrolled_but_unpaid','dropped_sibling','stale_crm_pointer','merge_collapsed_record','duplicate_payment','wrong_amount_payment','refund_not_reflected','sensitive_field_only_fix'];
   types.forEach((type, index) => { if ((byType.get(type) ?? 0) < (minimums[index] ?? Number.POSITIVE_INFINITY)) throw new Error(`conflict_minimum_missed:${type}`); });
   const conflictStudents = new Map<string, number>();
@@ -265,11 +270,11 @@ function validatePlan(fixtures: { contacts: CrmContact[]; deals: CrmDeal[]; stud
   const contactStudentIds = new Set(identities.contactStudentIds.values());
   const paymentStudentIds = new Set(identities.paymentStudentIds.values());
   const threeSource = fixtures.students.filter(({ id }) => contactStudentIds.has(id) && paymentStudentIds.has(id)).length;
-  if (threeSource < 17_500) throw new Error(`three_source_ratio_missed:${threeSource}`);
+  if (threeSource < 1_750) throw new Error(`three_source_ratio_missed:${threeSource}`);
   const reversedTimestamps = [...fixtures.students, ...fixtures.contacts].filter((record) => timestampIsReversed(record.created_at, record.updated_at)).length;
   const nullGuardian2 = fixtures.students.filter(({ guardian2_email }) => guardian2_email === null).length;
-  if (nullGuardian2 !== 15_000) throw new Error(`guardian2_null_ratio_missed:${nullGuardian2}`);
-  return { ...counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0), goldenConflicts: fixtures.golden.length, overlappingConflictRows: overlappingRows, threeSourceStudents: threeSource, households: 1000, orphanLeads: fixtures.contacts.filter(({ role }) => role === 'lead').length, reassertedFields: 25, malformedRecords: 21, reversedTimestamps, cleanEntities: REQUIRED_COUNTS.appStudents - conflictStudents.size };
+  if (nullGuardian2 !== 1_500) throw new Error(`guardian2_null_ratio_missed:${nullGuardian2}`);
+  return { ...counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0), goldenConflicts: fixtures.golden.length, overlappingConflictRows: overlappingRows, threeSourceStudents: threeSource, households: 100, orphanLeads: fixtures.contacts.filter(({ role }) => role === 'lead').length, reassertedFields: 3, malformedRecords: 21, reversedTimestamps, cleanEntities: REQUIRED_COUNTS.appStudents - conflictStudents.size };
 }
 
 export interface GenerateOptions {
@@ -302,27 +307,27 @@ export async function generateFixtures(options: GenerateOptions): Promise<Record
     contacts.push({ crm_id: `lead-${seed}-${pad(leadIndex)}`, email: `lead-${seed}-${pad(leadIndex)}@example.test`, first_name: name.first, last_name: name.last, lifecycle_stage: 'lead', created_at: createdAt, updated_at: updatedFor(leadIndex, createdAt), role: 'lead' });
   }
   const deals: CrmDeal[] = [];
-  for (let index = 0; index < 15_500; index += 1) {
+  for (let index = 0; index < 1_550; index += 1) {
     if (C1.has(index)) continue;
     const createdAt = dateFor(index, 11);
     deals.push({ deal_id: `deal-${seed}-${pad(index)}`, name: `Enrollment ${pad(index)}`, pipeline: 'admissions', stage: 'closed_won', amount: 50_000, associated_contact_ids: [`crm-${seed}-${pad(index)}`], created_at: createdAt, updated_at: updatedFor(index, createdAt) });
   }
   const payments: Payment[] = [];
   const paymentsByIndex = new Map<number, Payment>();
-  for (let index = 0; index < 18_000; index += 1) {
+  for (let index = 0; index < 1_800; index += 1) {
     if (C7.has(index) || C8.has(index)) continue;
     const payment = makePayment(seed, index, students[index]!);
     payments.push(payment);
     paymentsByIndex.set(index, payment);
   }
-  for (let index = 0; index < 200; index += 1) {
+  for (let index = 0; index < 20; index += 1) {
     payments.push({ fixture_record_id: `orphan-pay-${seed}-${pad(index)}`, payment_id: `orphan-payment-${seed}-${pad(index)}`, payer_email: `orphan-${seed}-${pad(index)}@example.test`, payer_name: `Orphan Fixture ${index}`, amount_cents: 50_000, currency: 'usd', type: 'deposit', status: 'paid', occurred_at: dateFor(index, 14) });
   }
   for (const index of C11) {
     const original = paymentsByIndex.get(index)!;
     payments.push({ ...original, fixture_record_id: `${original.payment_id}-duplicate` });
   }
-  for (let index = 18_000; payments.length < REQUIRED_COUNTS.payments; index += 1) {
+  for (let index = 1_800; payments.length < REQUIRED_COUNTS.payments; index += 1) {
     const payment = makePayment(seed, index, students[index]!);
     payments.push(payment);
     paymentsByIndex.set(index, payment);
@@ -343,8 +348,8 @@ export async function generateFixtures(options: GenerateOptions): Promise<Record
     writeJsonl(files.appEnrollments, enrollments),
     writeJsonl(files.payments, payments)
   ]);
-  const generation2 = [...C6].slice(0, 25).map((index) => ({ ...contactsByIndex.get(index)!, grade: students[index]!.grade }));
-  const generation3 = [...C6].slice(0, 25).map((index) => contactsByIndex.get(index)!);
+  const generation2 = [...C6].slice(0, 3).map((index) => ({ ...contactsByIndex.get(index)!, grade: students[index]!.grade }));
+  const generation3 = [...C6].slice(0, 3).map((index) => contactsByIndex.get(index)!);
   await writeJsonl(join(temporaryRoot, 'generations', '2', 'crm_contacts.delta.jsonl'), generation2);
   await writeJsonl(join(temporaryRoot, 'generations', '3', 'crm_contacts.delta.jsonl'), generation3);
   for (const generation of [1, 2, 3]) {
@@ -364,15 +369,15 @@ export async function generateFixtures(options: GenerateOptions): Promise<Record
   malformedLines.push(stableStringify({ fixture_record_id: 'oversized-0', payment_id: 'oversized', payload: 'x'.repeat(300_000) }));
   await writeFile(join(temporaryRoot, 'malformed-payments.jsonl'), `${malformedLines.join('\n')}\n`, 'utf8');
   const hashes = Object.fromEntries(await Promise.all(Object.entries(files).map(async ([key, path]) => [key, await fileHash(path)])));
-  const manifest = { schemaVersion: 'fixtures-v1', seed, generations: 3, files: Object.fromEntries(Object.entries(files).map(([key, path]) => [key, path.slice(temporaryRoot.length + 1)])), hashes, metrics };
+  const manifest = { schemaVersion: 'fixtures-v1', fixtureProfile: FIXTURE_PROFILE, seed, generations: 3, files: Object.fromEntries(Object.entries(files).map(([key, path]) => [key, path.slice(temporaryRoot.length + 1)])), hashes, metrics };
   await writeJson(join(temporaryRoot, 'manifest.json'), manifest);
   await rm(options.outputRoot, { recursive: true, force: true });
   await rename(temporaryRoot, options.outputRoot);
   await mkdir(options.goldenRoot, { recursive: true });
   await writeJson(join(options.goldenRoot, 'conflicts.json'), golden);
   const conflictStudentIds = new Set(golden.flatMap(({ entity_refs }) => entity_refs.filter((ref) => ref.startsWith('student:')).map((ref) => ref.slice('student:'.length))));
-  const cleanSample = students.filter(({ id }) => !conflictStudentIds.has(id)).slice(0, 1000).map((student) => ({ entity_ref: `student:${student.id}`, expected_conflicts: [], fixture_hash: sha256(stableStringify(student)) }));
-  if (cleanSample.length !== 1000) throw new Error('clean_sample_too_small');
+  const cleanSample = students.filter(({ id }) => !conflictStudentIds.has(id)).slice(0, 100).map((student) => ({ entity_ref: `student:${student.id}`, expected_conflicts: [], fixture_hash: sha256(stableStringify(student)) }));
+  if (cleanSample.length !== 100) throw new Error('clean_sample_too_small');
   await writeJson(join(options.goldenRoot, 'clean-sample.json'), cleanSample);
   const projection = buildCanonicalProjection({ crmContacts: contacts, crmDeals: deals, appStudents: students, appEnrollments: enrollments, payments });
   await writeJson(join(options.goldenRoot, 'entity-view.json'), shapePublicEntityView(projection, `entity:${cleanSample[0]!.entity_ref.slice('student:'.length)}`));

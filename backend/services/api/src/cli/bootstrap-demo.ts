@@ -13,14 +13,14 @@ const bootstrapPollTimeoutMs = 600_000;
 const sync = await triggerAndWait(config, baseUrl, 'sync', `${suffix}-sync`, 3, bootstrapPollTimeoutMs);
 assert.equal(sync.job.status, 'complete');
 assert.equal(sync.job.result.status, 'complete');
-assert.equal(sync.job.result.acceptedRecords, 120_000);
-assert.equal(sync.job.result.conflicts, 3050);
+assert.equal(sync.job.result.acceptedRecords, 12_000);
+assert.equal(sync.job.result.conflicts, 305);
 
 const reconcile = await triggerAndWait(config, baseUrl, 'reconcile', `${suffix}-reconcile`, 3, bootstrapPollTimeoutMs);
 assert.equal(reconcile.job.status, 'complete');
 assert.equal(reconcile.job.result.status, 'complete');
-assert.equal(reconcile.job.result.conflictCount, 3050);
-assert.equal(Number(reconcile.job.result.proposalsCreated) + Number(reconcile.job.result.proposalsDeduplicated), 3050);
+assert.equal(reconcile.job.result.conflictCount, 305);
+assert.equal(Number(reconcile.job.result.proposalsCreated) + Number(reconcile.job.result.proposalsDeduplicated), 305);
 assert.equal(reconcile.job.result.sourceMirrorHashAfter, reconcile.job.result.sourceMirrorHashBefore);
 
 const stretch = await triggerAndWait(config, baseUrl, 'stretch', `${suffix}-stretch`, 3, bootstrapPollTimeoutMs);

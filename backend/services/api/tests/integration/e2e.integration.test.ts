@@ -128,7 +128,7 @@ describe.sequential('live Compose vertical contract', () => {
     await expect(oversized.json()).resolves.toMatchObject({ error: { code: 'body_too_large' } });
   });
 
-  test('ingests exactly 120,000 source records and detects the 3,050-item golden set', async () => {
+  test('ingests exactly 12,000 source records and detects the 305-item golden set', async () => {
     const started = await startJob('/api/v1/jobs/sync', config.SYNC_TRIGGER_SECRET, jobKeys.sync);
     expect([200, 202]).toContain(started.response.status);
     syncJob = started.reference;
@@ -137,13 +137,13 @@ describe.sequential('live Compose vertical contract', () => {
     expect(syncRun.result).toMatchObject({
       status: 'complete',
       generation: 3,
-      acceptedRecords: 120_000,
-      conflicts: 3050,
+      acceptedRecords: 12_000,
+      conflicts: 305,
       sourceAvailability: { crm: 'complete', app: 'complete', payments: 'complete' }
     });
     const durationMs = Number(syncRun.result.durationMs);
     expect(durationMs).toBeLessThan(30_000);
-    expect(120_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
+    expect(12_000 / (durationMs / 1000)).toBeGreaterThanOrEqual(500);
 
     const syncRunId = String(syncRun.result.runId);
     const { response, body } = await request<{
@@ -156,8 +156,8 @@ describe.sequential('live Compose vertical contract', () => {
     expect(body.data.kind).toBe('sync');
     expect(body.data.sources).toHaveLength(3);
     expect(body.data.sources.every(({ status }) => status === 'complete')).toBe(true);
-    expect(body.data.sources.reduce((sum, row) => sum + row.accepted_count, 0)).toBe(120_000);
-    expect(body.data.invariants).toEqual([expect.objectContaining({ status: 'complete', summary: expect.objectContaining({ fail: 3050 }) })]);
+    expect(body.data.sources.reduce((sum, row) => sum + row.accepted_count, 0)).toBe(12_000);
+    expect(body.data.invariants).toEqual([expect.objectContaining({ status: 'complete', summary: expect.objectContaining({ fail: 305 }) })]);
   }, 150_000);
 
   test('returns the committed hand-checked cross-source entity view', async () => {
@@ -201,8 +201,8 @@ describe.sequential('live Compose vertical contract', () => {
     reconcileRun = await waitForJob(reconcileJob.id);
     expect(reconcileRun.status).toBe('complete');
     expect(reconcileRun.result.status).toBe('complete');
-    expect(reconcileRun.result.conflictCount).toBe(3050);
-    expect(Number(reconcileRun.result.proposalsCreated) + Number(reconcileRun.result.proposalsDeduplicated)).toBe(3050);
+    expect(reconcileRun.result.conflictCount).toBe(305);
+    expect(Number(reconcileRun.result.proposalsCreated) + Number(reconcileRun.result.proposalsDeduplicated)).toBe(305);
     expect(reconcileRun.result.providerCalls).toBe(reconcileRun.result.proposalsCreated);
     expect(reconcileRun.result.sourceMirrorHashAfter).toBe(reconcileRun.result.sourceMirrorHashBefore);
     expect(Number(reconcileRun.result.durationMs)).toBeLessThan(30_000);
@@ -214,9 +214,9 @@ describe.sequential('live Compose vertical contract', () => {
       invariant: { summary: { fail: number } };
       reconciliation: { ok: boolean; checks: Array<{ name: string; ok: boolean }> };
     }>('/api/v1/overview', { headers: reviewerHeaders });
-    expect(overview.body.data.conflicts.active).toBe('3050');
-    expect(overview.body.data.invariant.summary.fail).toBe(3050);
-    expect(overview.body.data.proposals.reduce((sum, row) => sum + row.count, 0)).toBe(3050);
+    expect(overview.body.data.conflicts.active).toBe('305');
+    expect(overview.body.data.invariant.summary.fail).toBe(305);
+    expect(overview.body.data.proposals.reduce((sum, row) => sum + row.count, 0)).toBe(305);
     expect(overview.body.data.reconciliation.ok).toBe(true);
     expect(overview.body.data.reconciliation.checks.every(({ ok }) => ok)).toBe(true);
     expect(BigInt(overview.body.data.spend.actual_microcents)).toBeLessThanOrEqual(BigInt(overview.body.data.spend.cap_microcents));
@@ -241,10 +241,10 @@ describe.sequential('live Compose vertical contract', () => {
     const autoApply = run.result.autoApply as { scanned: number; applied: number; denied: number; sensitiveDenied: number; sourceMirrorHashBefore: string; sourceMirrorHashAfter: string };
     expect(grouping.model).toBe('conflict-pattern-hash-v1');
     expect(grouping.dimensions).toBe(64);
-    expect(grouping.memberCount).toBe(3050);
+    expect(grouping.memberCount).toBe(305);
     expect(grouping.groupCount).toBeGreaterThan(0);
-    expect(tickets.extracted).toBe(3050);
-    expect(tickets.matchedConflicts).toBe(3050);
+    expect(tickets.extracted).toBe(305);
+    expect(tickets.matchedConflicts).toBe(305);
     expect(autoApply.sourceMirrorHashAfter).toBe(autoApply.sourceMirrorHashBefore);
     expect(autoApply.sensitiveDenied).toBeGreaterThan(0);
     expect(autoApply.scanned).toBeGreaterThan(0);
@@ -267,8 +267,8 @@ describe.sequential('live Compose vertical contract', () => {
     }>('/api/v1/overview', { headers: reviewerHeaders });
     expect(overview.body.data.privacy.mode).toBe('redacted');
     expect(overview.body.data.privacy.retentionDays).toBe(config.LOG_RETENTION_DAYS);
-    expect(overview.body.data.stretch.extractedTickets).toBe(3050);
-    expect(overview.body.data.proposals.reduce((sum, proposal) => sum + proposal.count, 0)).toBe(3050);
+    expect(overview.body.data.stretch.extractedTickets).toBe(305);
+    expect(overview.body.data.proposals.reduce((sum, proposal) => sum + proposal.count, 0)).toBe(305);
     const applied = overview.body.data.proposals.find(({ status }) => status === 'applied')?.count ?? 0;
     expect(applied).toBe(appliedBefore + autoApply.applied);
 
@@ -323,7 +323,7 @@ describe.sequential('live Compose vertical contract', () => {
     expect(run.status).toBe('complete');
     expect(run.result).toMatchObject({
       status: 'partial',
-      acceptedRecords: 65_000,
+      acceptedRecords: 6_500,
       conflicts: 0,
       sourceAvailability: { crm: 'failed', app: 'complete', payments: 'complete' }
     });

@@ -542,8 +542,8 @@ describe('sync idempotency', () => {
       status: 'complete',
       generation: 3,
       sourceAvailability: { crm: 'complete', app: 'complete', payments: 'complete' },
-      acceptedRecords: 120_000,
-      conflicts: 3050,
+      acceptedRecords: 12_000,
+      conflicts: 305,
       mirrorHash: 'existing-hash',
       durationMs: 12_345
     };

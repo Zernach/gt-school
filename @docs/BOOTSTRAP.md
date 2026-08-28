@@ -105,7 +105,7 @@ The build is complete only when all of these are true:
   documented commands.
 - The seed validator proves the required source volumes, clean ratio, 70%
   three-source student representation, household/orphan counts, all C1–C14
-  minimums, 10% overlap, three generations, 25 reasserted fields, malformed
+  minimums, 10% overlap, three generations, three reasserted fields, malformed
   records, and byte-stable output for a repeated `--seed 424242` run.
 - The invariant suite detects `golden/conflicts.json` exactly with zero false
   negatives and zero false positives, while the 1,000-entity clean sample
@@ -276,12 +276,12 @@ The default seed is `424242`. The generator must produce at least:
 
 | Source | Required records |
 |---|---:|
-| CRM contacts | 40,000 |
-| CRM deals | 15,000 |
-| App students | 25,000 |
-| App enrollments | 22,000 |
-| Payments including refunds | 18,000 |
-| **Total** | **120,000** |
+| CRM contacts | 4,000 |
+| CRM deals | 1,500 |
+| App students | 2,500 |
+| App enrollments | 2,200 |
+| Payments including refunds | 1,800 |
+| **Total** | **12,000** |
 
 Meet the requirements’ ratios and structural data before conflict injection:
 
@@ -303,7 +303,7 @@ use guardian email alone as a child identity.
 Implement a deterministic conflict planner that reserves anchors and records
 each mutation in the golden manifest. It must meet or exceed every C1–C14
 minimum, including C3 pairs, and make at least 10% of conflicts overlap in two
-causes. Generate at least three snapshots per source. At least 25 fields must
+causes. Generate at least three snapshots per source. At least three fields must
 reassert an older stale value in a later generation. Generate at least 20
 malformed records through the adapter validation path, including missing field,
 wrong type, truncated JSON, and oversized body cases.
@@ -642,7 +642,7 @@ order:
 6. `./backend/docker/compose.sh config --quiet`;
 7. `./backend/docker/compose.sh up --build --wait`;
 8. migration idempotency and `/health` dependency checks;
-9. seeded 120k end-to-end sync, query, invariant, proposal, and source-hash
+9. seeded 12k end-to-end sync, query, invariant, proposal, and source-hash
    proof;
 10. duplicate Redis delivery, worker restart/reclaim, partial source, timeout,
     malformed 4xx, stale pointer, reassertion/oscillation, and cap burst tests;

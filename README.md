@@ -69,7 +69,7 @@ These are intentionally public credentials for synthetic data only. They must be
 
 ## Correctness and safety
 
-- The canonical fixture seed is `424242`: 120,000 records across three generations, with a committed 3,050-conflict golden set.
+- The canonical fixture seed is `424242`: a 12,000-record (10% representative) three-generation demo slice with a committed 305-conflict golden set.
 - Identity matching prefers a valid hard external ID, then unique normalized name + date of birth, then unique normalized email. Guardian email is household evidence, not child identity.
 - Reconciliation never writes to a source. Before a provider call, Keystone reserves the worst-case cost transactionally; every resulting proposal is `pending` until a reviewer approves, rejects, or holds it. Stretch auto-apply is a separate gated function that can mark Keystone-internal `applied` rows with a rollback snapshot; it still never writes a source system and never touches sensitive fields.
 - The default `keystone-deterministic-v1` provider needs no key. `PROVIDER_MODE=external` fails closed because no external provider is implemented.

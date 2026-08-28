@@ -1,8 +1,8 @@
 # Synthetic fixture workspace
 
-`npm run seed -- --seed 424242` deterministically creates `fixtures/generated/` in one command. Bulk output is ignored because it is reproducible (~37 MiB); the compact grading oracles under `golden/` are committed.
+`npm run seed -- --seed 424242` deterministically creates `fixtures/generated/` in one command. Bulk output is ignored because it is reproducible (~4 MiB); the compact grading oracles under `golden/` are committed.
 
-The generator writes stable-key-sorted JSONL for 40,000 CRM contacts, 15,000 CRM deals, 25,000 App students, 22,000 App enrollments, and 18,000 Payments records. Generation 1 is the base; generations 2 and 3 apply committed-shape deltas, including 25 values reasserted against the App view.
+The generator writes stable-key-sorted JSONL for a representative 10% slice: 4,000 CRM contacts, 1,500 CRM deals, 2,500 App students, 2,200 App enrollments, and 1,800 Payments records. Generation 1 is the base; generations 2 and 3 apply committed-shape deltas, including three values reasserted against the App view.
 
 `manifest.json` records schema/seed, relative paths, SHA-256 hashes, generation count, record volumes, clean-entity count, three-source coverage, households, legitimate orphan leads, overlaps, reversed timestamps, malformed payloads, and reassertions. Tests enforce every Appendix A minimum and rerun generation into two temporary directories to prove byte equality.
 
@@ -12,6 +12,6 @@ Never replace generated fixtures with a production export. Every email uses rese
 
 Committed oracles:
 
-- `golden/conflicts.json`: exact 3,050-conflict grading set;
-- `golden/clean-sample.json`: 1,000 known-clean entity hashes; and
+- `golden/conflicts.json`: exact 305-conflict grading set;
+- `golden/clean-sample.json`: 100 known-clean entity hashes; and
 - `golden/entity-view.json`: a hand-checked CRM/App/Payments unified query result.

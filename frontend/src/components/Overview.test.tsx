@@ -18,8 +18,8 @@ describe('trust overview', () => {
   it('renders active conflicts with thousands separators', () => {
     render(<Overview overview={overviewFixture()} />);
     const card = screen.getByText('Active conflicts').closest('article')!;
-    expect(within(card).getByText('3,050')).toBeInTheDocument();
-    expect(within(card).getByText('3,049 proposals awaiting review · 25 resolved')).toBeInTheDocument();
+    expect(within(card).getByText('305')).toBeInTheDocument();
+    expect(within(card).getByText('304 proposals awaiting review · 2 resolved')).toBeInTheDocument();
   });
 
   it('finds the pending queue count regardless of proposal order', () => {
@@ -85,9 +85,9 @@ describe('trust overview', () => {
     expect(within(region).getByText('APP')).toBeInTheDocument();
     expect(within(region).getByText('CRM')).toBeInTheDocument();
     expect(within(region).getByText('PAYMENTS')).toBeInTheDocument();
-    expect(within(region).getByText('47,000 records · generation 3')).toBeInTheDocument();
-    expect(within(region).getByText('55,000 records · generation 3')).toBeInTheDocument();
-    expect(within(region).getByText('18,000 records · generation 3')).toBeInTheDocument();
+    expect(within(region).getByText('4,700 records · generation 3')).toBeInTheDocument();
+    expect(within(region).getByText('5,500 records · generation 3')).toBeInTheDocument();
+    expect(within(region).getByText('1,800 records · generation 3')).toBeInTheDocument();
   });
 
   it('uses machine-readable source freshness times', () => {
@@ -114,7 +114,7 @@ describe('trust overview', () => {
     render(<Overview overview={overviewFixture({ proposals: [{ status: 'applied', count: 18 }, { status: 'pending', count: 3032 }] })} />);
     expect(within(screen.getByText('Auto-applied').closest('article')!).getByText('18')).toBeInTheDocument();
     expect(within(screen.getByText('Incident groups').closest('article')!).getByText('14')).toBeInTheDocument();
-    expect(screen.getByText('3,050 extracted tickets')).toBeInTheDocument();
+    expect(screen.getByText('305 extracted tickets')).toBeInTheDocument();
   });
 
   it('documents log redaction and retention without color-only state', () => {
@@ -127,7 +127,7 @@ describe('trust overview', () => {
     render(<Overview overview={overviewFixture()} />);
     expect(screen.getByRole('heading', { name: 'Ready for guarded review' })).toBeInTheDocument();
     expect(screen.getByText('Review before approving')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Review 3,049 pending proposals' })).toHaveAttribute('href', '#conflicts-heading');
+    expect(screen.getByRole('link', { name: 'Review 304 pending proposals' })).toHaveAttribute('href', '#conflicts-heading');
     expect(screen.getByText('100.0% checked')).toBeInTheDocument();
     expect(screen.getByText('3 of 3 complete')).toBeInTheDocument();
   });
@@ -142,13 +142,13 @@ describe('trust overview', () => {
       reconciliation: {
         ok: false,
         checks: [
-          { name: 'conflicts_match_invariant_fail', actual: 12, expected: 3050, ok: false },
+          { name: 'conflicts_match_invariant_fail', actual: 12, expected: 305, ok: false },
           { name: 'spend_within_daily_cap', actual: 1, expected: 1, ok: true }
         ]
       }
     })} />);
     expect(screen.getByRole('alert')).toHaveTextContent('Dashboard figures do not match logs');
-    expect(screen.getByText(/conflicts match invariant fail: 12 vs 3050/u)).toBeInTheDocument();
+    expect(screen.getByText(/conflicts match invariant fail: 12 vs 305/u)).toBeInTheDocument();
   });
 
   it('shows a spend-cap alert in visible text', () => {

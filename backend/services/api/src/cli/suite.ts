@@ -18,8 +18,8 @@ const proposalsCreated = Number(reconcileResult.proposalsCreated);
 const proposalsDeduplicated = Number(reconcileResult.proposalsDeduplicated);
 const checks = {
   syncComplete: syncResult.status === 'complete',
-  exactFixtureCount: acceptedRecords === 120_000,
-  exactGoldenConflicts: conflictCount === 3050,
+  exactFixtureCount: acceptedRecords === 12_000,
+  exactGoldenConflicts: conflictCount === 305,
   ingestionUnderThirtySeconds: durationMs < 30_000,
   ingestionAtLeastFiveHundredPerSecond: acceptedRecords / (durationMs / 1000) >= 500,
   reconcileComplete: reconcileResult.status === 'complete',

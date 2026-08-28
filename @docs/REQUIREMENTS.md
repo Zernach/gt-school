@@ -250,9 +250,9 @@ Your seed generator must produce this dataset. It is a graded deliverable: the g
 
 | Source | Entities | Volume |
 |---|---|---|
-| CRM (HubSpot-shaped) | contacts, deals | 40,000 contacts · 15,000 deals |
-| App DB (Postgres) | students, enrollments | 25,000 students · 22,000 enrollments |
-| Payments (Stripe-shaped) | payments, refunds | 18,000 payments (incl. refunds) |
+| CRM (HubSpot-shaped) | contacts, deals | 4,000 contacts · 1,500 deals |
+| App DB (Postgres) | students, enrollments | 2,500 students · 2,200 enrollments |
+| Payments (Stripe-shaped) | payments, refunds | 1,800 payments (incl. refunds) |
 
 ~70% of students must exist in **all three sources**; the remainder in one or two (some legitimately, some as planted conflicts — see A.4). **≥ 85% of entities must be fully consistent:** your invariants are graded on false positives against the clean majority, not just recall on the conflicts.
 

@@ -9,7 +9,7 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
         source_kind: 'app',
         activated_at: FIXED_TIME,
         generation: 3,
-        accepted_count: 47_000,
+        accepted_count: 4_700,
         rejected_count: 0,
         status: 'complete'
       },
@@ -17,7 +17,7 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
         source_kind: 'crm',
         activated_at: FIXED_TIME,
         generation: 3,
-        accepted_count: 55_000,
+        accepted_count: 5_500,
         rejected_count: 0,
         status: 'complete'
       },
@@ -25,25 +25,25 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
         source_kind: 'payments',
         activated_at: FIXED_TIME,
         generation: 3,
-        accepted_count: 18_000,
+        accepted_count: 1_800,
         rejected_count: 0,
         status: 'complete'
       }
     ],
     conflicts: {
-      active: '3050',
-      resolved: '25',
+      active: '305',
+      resolved: '2',
       oscillation_hold: '0'
     },
     proposals: [
       { status: 'approved', count: 1 },
-      { status: 'pending', count: 3049 }
+      { status: 'pending', count: 304 }
     ],
     invariant: {
       status: 'complete',
       summary: {
-        pass: 347_650,
-        fail: 3050,
+        pass: 34_765,
+        fail: 305,
         unchecked: 0,
         error: 0
       },
@@ -73,8 +73,8 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
     },
     stretch: {
       incidentGroups: 14,
-      groupedConflicts: 3050,
-      extractedTickets: 3050
+      groupedConflicts: 305,
+      extractedTickets: 305
     },
     privacy: {
       mode: 'redacted',
@@ -87,9 +87,9 @@ export function overviewFixture(overrides: Partial<OverviewData> = {}): Overview
     reconciliation: {
       ok: true,
       checks: [
-        { name: 'ingestion_matches_active_snapshots', actual: 120_000, expected: 120_000, ok: true },
-        { name: 'conflicts_match_invariant_fail', actual: 3050, expected: 3050, ok: true },
-        { name: 'pending_proposals_within_active_conflicts', actual: 3049, expected: 3050, ok: true },
+        { name: 'ingestion_matches_active_snapshots', actual: 12_000, expected: 12_000, ok: true },
+        { name: 'conflicts_match_invariant_fail', actual: 305, expected: 305, ok: true },
+        { name: 'pending_proposals_within_active_conflicts', actual: 304, expected: 305, ok: true },
         { name: 'spend_within_daily_cap', actual: 6100, expected: 1_000_000, ok: true }
       ]
     },
@@ -217,7 +217,7 @@ export function conflictDetailFixture(overrides: Partial<ConflictDetail> = {}): 
         actor: 'system:sync',
         object_type: 'sync_run',
         object_id: 'sync-1',
-        metadata: { accepted: 120_000 },
+        metadata: { accepted: 12_000 },
         created_at: FIXED_TIME
       },
       {

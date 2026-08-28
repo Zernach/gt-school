@@ -84,8 +84,9 @@ Spend rows use `bigint` integer microcents. Reservations lock day and run ledger
 
 ## Indexes
 
-- active-snapshot source lookup and canonical-link lookup; field lineage uses
-  the unique source-record/field-path key instead of a redundant tenant index;
+- active-snapshot source lookup plus source-ID and canonical-link lookups for
+  bounded conflict lineage; field lineage uses the unique source-record/field-path
+  key instead of a redundant tenant index;
 - GIN on conflict source arrays; raw mirrored payloads are intentionally
   unindexed because the API reaches them through source-record IDs and field
   lineage, avoiding an ingestion-time index write for arbitrary JSON queries;

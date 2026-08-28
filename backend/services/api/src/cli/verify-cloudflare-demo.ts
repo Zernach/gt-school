@@ -13,14 +13,14 @@ assert.match(releaseSha, /^[0-9a-f]{40}$/u, 'GT_SCHOOL_RELEASE_SHA must be the f
 const sync = await triggerAndWait(config, baseUrl, 'sync', `cloudflare-release-${releaseSha}-sync`, 3, pollTimeoutMs);
 assert.equal(sync.job.status, 'complete');
 assert.equal(sync.job.result.status, 'complete');
-assert.equal(sync.job.result.acceptedRecords, 120_000);
-assert.equal(sync.job.result.conflicts, 3050);
+assert.equal(sync.job.result.acceptedRecords, 12_000);
+assert.equal(sync.job.result.conflicts, 305);
 
 const reconcile = await triggerAndWait(config, baseUrl, 'reconcile', `cloudflare-release-${releaseSha}-reconcile`, 3, pollTimeoutMs);
 assert.equal(reconcile.job.status, 'complete');
 assert.equal(reconcile.job.result.status, 'complete');
-assert.equal(reconcile.job.result.conflictCount, 3050);
-assert.equal(Number(reconcile.job.result.proposalsCreated) + Number(reconcile.job.result.proposalsDeduplicated), 3050);
+assert.equal(reconcile.job.result.conflictCount, 305);
+assert.equal(Number(reconcile.job.result.proposalsCreated) + Number(reconcile.job.result.proposalsDeduplicated), 305);
 assert.equal(reconcile.job.result.sourceMirrorHashBefore, reconcile.job.result.sourceMirrorHashAfter);
 
 process.stdout.write(`${JSON.stringify({

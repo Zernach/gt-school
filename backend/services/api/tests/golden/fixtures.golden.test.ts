@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import type { GoldenConflict } from '../../src/domain/fixture-types.js';
 import { conflictTypes } from '../../src/domain/fixture-types.js';
 import { evaluateInvariants } from '../../src/domain/invariants.js';
-import { CANONICAL_SEED, generateFixtures, REQUIRED_COUNTS } from '../../src/fixtures/generator.js';
+import { CANONICAL_SEED, FIXTURE_PROFILE, generateFixtures, REQUIRED_COUNTS } from '../../src/fixtures/generator.js';
 import { loadFixtureSet, readMalformedFixture } from '../../src/fixtures/reader.js';
 import { buildCanonicalProjection, shapePublicEntityView } from '../../src/ingestion/projection.js';
 
@@ -30,32 +30,32 @@ afterAll(async () => {
 
 describe('canonical generator manifest', () => {
   it('records the canonical seed and versioned three-generation contract', () => {
-    expect(manifest).toMatchObject({ schemaVersion: 'fixtures-v1', seed: 424242, generations: 3 });
+    expect(manifest).toMatchObject({ schemaVersion: 'fixtures-v1', fixtureProfile: FIXTURE_PROFILE, seed: 424242, generations: 3 });
   });
 
-  it('produces exactly the normative 120,000 source records', () => {
+  it('produces exactly the normative 12,000-record demo slice', () => {
     expect(manifest.metrics).toMatchObject({
       crmContacts: REQUIRED_COUNTS.crmContacts,
       crmDeals: REQUIRED_COUNTS.crmDeals,
       appStudents: REQUIRED_COUNTS.appStudents,
       appEnrollments: REQUIRED_COUNTS.appEnrollments,
       payments: REQUIRED_COUNTS.payments,
-      total: 120_000
+      total: 12_000
     });
   });
 
   it('meets the household, lead-noise, reassertion, and malformed minima', () => {
     expect(manifest.metrics).toMatchObject({
-      households: 1000,
-      orphanLeads: 15_100,
-      reassertedFields: 25,
+      households: 100,
+      orphanLeads: 1_510,
+      reassertedFields: 3,
       malformedRecords: 21
     });
   });
 
   it('places at least 70 percent of students in all three sources', () => {
     const metrics = manifest.metrics as { threeSourceStudents: number };
-    expect(metrics.threeSourceStudents).toBeGreaterThanOrEqual(17_500);
+    expect(metrics.threeSourceStudents).toBeGreaterThanOrEqual(1_750);
     expect(metrics.threeSourceStudents / REQUIRED_COUNTS.appStudents).toBeGreaterThanOrEqual(0.7);
   });
 
@@ -83,20 +83,20 @@ describe('canonical generator manifest', () => {
 
 describe('mandated conflict distribution', () => {
   const minimums: Record<string, number> = {
-    paid_but_no_deal: 500,
-    payment_with_no_person: 200,
-    duplicate_by_email: 300,
-    cross_source_email_mismatch: 250,
-    required_source_missing: 400,
-    material_field_disagreement: 500,
-    enrolled_but_unpaid: 300,
-    dropped_sibling: 150,
-    stale_crm_pointer: 100,
-    merge_collapsed_record: 50,
-    duplicate_payment: 50,
-    wrong_amount_payment: 100,
-    refund_not_reflected: 100,
-    sensitive_field_only_fix: 50
+    paid_but_no_deal: 50,
+    payment_with_no_person: 20,
+    duplicate_by_email: 30,
+    cross_source_email_mismatch: 25,
+    required_source_missing: 40,
+    material_field_disagreement: 50,
+    enrolled_but_unpaid: 30,
+    dropped_sibling: 15,
+    stale_crm_pointer: 10,
+    merge_collapsed_record: 5,
+    duplicate_payment: 5,
+    wrong_amount_payment: 10,
+    refund_not_reflected: 10,
+    sensitive_field_only_fix: 5
   };
 
   it('exports all and only C1-C14 conflict types', () => {
@@ -107,8 +107,8 @@ describe('mandated conflict distribution', () => {
     expect(golden.filter((row) => row.type === type)).toHaveLength(minimums[type]!);
   });
 
-  it('exports exactly 3,050 planted conflict rows', () => {
-    expect(golden).toHaveLength(3050);
+  it('exports exactly 305 planted conflict rows', () => {
+    expect(golden).toHaveLength(305);
   });
 
   it('uses a stable unique key for every planted verdict', () => {
@@ -146,7 +146,7 @@ describe('golden invariant scorecard', () => {
       detected: detected.length,
       falseNegatives: expected.filter((row) => !detected.some(({ conflict_key }) => conflict_key === row.conflict_key)).length,
       falsePositives: detected.filter((row) => !expected.some(({ conflict_key }) => conflict_key === row.conflict_key)).length
-    }).toEqual({ expected: 3050, detected: 3050, falseNegatives: 0, falsePositives: 0 });
+    }).toEqual({ expected: 305, detected: 305, falseNegatives: 0, falsePositives: 0 });
   }, 30_000);
 
   it('keeps every committed clean-sample entity conflict-free', async () => {
@@ -154,17 +154,17 @@ describe('golden invariant scorecard', () => {
     const conflicts = evaluateInvariants(fixtures).conflicts;
     const conflictRefs = new Set(conflicts.flatMap(({ entity_refs }) => entity_refs));
     const cleanSample = JSON.parse(await readFile(join(goldenRoot, 'clean-sample.json'), 'utf8')) as Array<{ entity_ref: string; expected_conflicts: unknown[]; fixture_hash: string }>;
-    expect(cleanSample).toHaveLength(1000);
+    expect(cleanSample).toHaveLength(100);
     expect(cleanSample.every(({ entity_ref }) => !conflictRefs.has(entity_ref))).toBe(true);
     expect(cleanSample.every(({ expected_conflicts }) => expected_conflicts.length === 0)).toBe(true);
     expect(cleanSample.every(({ fixture_hash }) => /^[0-9a-f]{64}$/u.test(fixture_hash))).toBe(true);
   }, 30_000);
 
-  it('never flags the 15,100 legitimate deal-less CRM leads as paid-but-no-deal', async () => {
+  it('never flags the 1,510 legitimate deal-less CRM leads as paid-but-no-deal', async () => {
     const fixtures = await loadFixtureSet(fixtureRoot, 3);
     const leadRefs = new Set(fixtures.crmContacts.filter(({ role }) => role === 'lead').map(({ crm_id }) => `crm:${crm_id}`));
     const paidWithoutDeal = evaluateInvariants(fixtures).conflicts.filter(({ type }) => type === 'paid_but_no_deal');
-    expect(paidWithoutDeal).toHaveLength(500);
+    expect(paidWithoutDeal).toHaveLength(50);
     expect(paidWithoutDeal.some(({ entity_refs }) => entity_refs.some((ref) => leadRefs.has(ref)))).toBe(false);
   }, 30_000);
 
@@ -184,22 +184,22 @@ describe('golden invariant scorecard', () => {
 });
 
 describe('adversarial generations', () => {
-  it('temporarily removes exactly 25 grade conflicts in generation two', async () => {
+  it('temporarily removes exactly three grade conflicts in generation two', async () => {
     const generationOne = evaluateInvariants(await loadFixtureSet(fixtureRoot, 1)).conflicts;
     const generationTwo = evaluateInvariants(await loadFixtureSet(fixtureRoot, 2)).conflicts;
     const generationOneGrade = generationOne.filter(({ type }) => type === 'material_field_disagreement');
     const generationTwoGrade = generationTwo.filter(({ type }) => type === 'material_field_disagreement');
-    expect(generationOneGrade).toHaveLength(500);
-    expect(generationTwoGrade).toHaveLength(475);
-    expect(generationOneGrade.filter(({ conflict_key }) => !generationTwoGrade.some((row) => row.conflict_key === conflict_key))).toHaveLength(25);
+    expect(generationOneGrade).toHaveLength(50);
+    expect(generationTwoGrade).toHaveLength(47);
+    expect(generationOneGrade.filter(({ conflict_key }) => !generationTwoGrade.some((row) => row.conflict_key === conflict_key))).toHaveLength(3);
   }, 30_000);
 
-  it('reasserts all 25 stale grade values in generation three', async () => {
+  it('reasserts all three stale grade values in generation three', async () => {
     const generationTwo = evaluateInvariants(await loadFixtureSet(fixtureRoot, 2)).conflicts;
     const generationThree = evaluateInvariants(await loadFixtureSet(fixtureRoot, 3)).conflicts;
     const generationTwoKeys = new Set(generationTwo.map(({ conflict_key }) => conflict_key));
     const reasserted = generationThree.filter(({ type, conflict_key }) => type === 'material_field_disagreement' && !generationTwoKeys.has(conflict_key));
-    expect(reasserted).toHaveLength(25);
+    expect(reasserted).toHaveLength(3);
   }, 30_000);
 });
 

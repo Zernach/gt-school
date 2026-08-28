@@ -6,7 +6,7 @@
 flowchart LR
   subgraph SOURCES["Synthetic source systems - read only"]
     CRM["CRM JSONL\n40k contacts + 15k deals"]
-    APP[("source_app Postgres\n25k students + 22k enrollments")]
+    APP[("source_app Postgres\n2.5k students + 2.2k enrollments")]
     PAY["Payments JSONL\n18k payments"]
   end
 

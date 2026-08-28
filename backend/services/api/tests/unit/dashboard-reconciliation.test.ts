@@ -18,19 +18,19 @@ describe('committed invariant registry', () => {
 describe('dashboard figure reconciliation', () => {
   it('passes when ingestion, invariants, proposals, and spend agree', () => {
     expect(reconcileDashboardFigures({
-      ingestedAccepted: 120_000,
-      latestRunAccepted: 120_000,
-      invariantFail: 3050,
-      conflictsActive: 3050,
-      proposalsPending: 3050,
+      ingestedAccepted: 12_000,
+      latestRunAccepted: 12_000,
+      invariantFail: 305,
+      conflictsActive: 305,
+      proposalsPending: 305,
       spendActual: 6100,
       spendCap: 1_000_000
     })).toEqual({
       ok: true,
       checks: [
-        { name: 'ingestion_matches_active_snapshots', actual: 120_000, expected: 120_000, ok: true },
-        { name: 'conflicts_match_invariant_fail', actual: 3050, expected: 3050, ok: true },
-        { name: 'pending_proposals_within_active_conflicts', actual: 3050, expected: 3050, ok: true },
+        { name: 'ingestion_matches_active_snapshots', actual: 12_000, expected: 12_000, ok: true },
+        { name: 'conflicts_match_invariant_fail', actual: 305, expected: 305, ok: true },
+        { name: 'pending_proposals_within_active_conflicts', actual: 305, expected: 305, ok: true },
         { name: 'spend_within_daily_cap', actual: 6100, expected: 1_000_000, ok: true }
       ]
     });
@@ -39,8 +39,8 @@ describe('dashboard figure reconciliation', () => {
   it('fails closed when a dashboard figure disagrees with the logs', () => {
     const result = reconcileDashboardFigures({
       ingestedAccepted: 65_000,
-      latestRunAccepted: 120_000,
-      invariantFail: 3050,
+      latestRunAccepted: 12_000,
+      invariantFail: 305,
       conflictsActive: 12,
       proposalsPending: 40,
       spendActual: 50,

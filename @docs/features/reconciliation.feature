@@ -6,10 +6,10 @@ Feature: Cross-source reconciliation remains truthful and guarded
 
   Scenario: A complete sync establishes one coherent truth window
     When the scheduler submits a generation 3 sync with the sync secret
-    Then 120000 source records are accepted
+    Then 12000 source records are accepted
     And each record retains source identity, observed time, ingest time, and field lineage
     And the three active source pointers advance together
-    And 3050 golden conflicts are detected with no extra or missing verdicts
+    And 305 golden conflicts are detected with no extra or missing verdicts
 
   Scenario: A source failure cannot create a false clean result
     Given a last-known-complete active source set
@@ -19,7 +19,7 @@ Feature: Cross-source reconciliation remains truthful and guarded
     And no active source pointer advances
 
   Scenario: Reconciliation holds before every write
-    Given 3050 active conflicts
+    Given 305 active conflicts
     When the unattended reconciler completes
     Then each conflict has one created or deduplicated stable proposal
     And every newly created proposal is pending with evidence and deterministic confidence
@@ -40,7 +40,7 @@ Feature: Cross-source reconciliation remains truthful and guarded
     And closing returns focus to the invoking conflict
 
   Scenario: Stretch grouping, tickets, auto-apply, and privacy stay source-safe
-    Given 3050 active conflicts with pending proposals
+    Given 305 active conflicts with pending proposals
     When the stretch job completes
     Then related failures are clustered into pgvector incident groups
     And each conflict yields a ticket with student, family, system, record, issue, owner, action, and dates

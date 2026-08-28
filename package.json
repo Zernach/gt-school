@@ -26,7 +26,7 @@
     "reconcile": "npm run reconcile --workspace @keystone/api --",
     "suite": "npm run suite --workspace @keystone/api --",
     "test:golden": "npm run test:golden --workspace @keystone/api --",
-    "test:integration": "npm run test:integration --workspace @keystone/api --",
+    "test:integration": "bash scripts/test-integration.sh",
     "test:spend-cap": "./backend/docker/compose.sh run --rm -T init node dist/cli/cap-burst.js",
     "test:security": "./backend/docker/compose.sh run --rm -T init node dist/cli/security-check.js",
     "test:worker-recovery": "bash scripts/test-worker-recovery.sh",

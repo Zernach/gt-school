@@ -35,7 +35,7 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .site-header h1, .site-header p { margin: 0; }
 .site-header h1 { font-size: 1.15rem; letter-spacing: 0.01em; }
 .site-header p { color: var(--color-text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; }
-.brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--color-accent-arctic-cyan); border-radius: 0.65rem; background: linear-gradient(145deg, rgba(0, 229, 255, 0.16), rgba(120, 81, 169, 0.32)); color: var(--color-accent-arctic-cyan); font-weight: 800; }
+.gt-school-logo { display: block; width: 150px; height: auto; flex: 0 0 auto; }
 .header-state { min-width: 0; margin-left: auto; }
 main { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(1rem, 3vw, 2.25rem) 0 4rem; }
 h2, h3 { margin: 0; letter-spacing: -0.02em; }
@@ -268,6 +268,7 @@ footer { padding: 1.5rem; border-top: 1px solid var(--color-border); color: var(
   main { width: min(100% - 1rem, 1500px); }
   .site-header { padding-inline: 0.75rem; }
   .site-header p { display: none; }
+  .gt-school-logo { width: 102px; }
   .header-state .status-badge { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
   .metric-grid, .filters, .evidence-grid { grid-template-columns: 1fr; }
   .window-context, .overview-guidance { grid-template-columns: 1fr; }

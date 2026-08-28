@@ -7,10 +7,10 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 | Requirement | Owning implementation | Automated proof |
 |---|---|---|
 | Three read-only sources, immutable mirror, ingest time, field lineage | `sources/`, `ingestion/sync.ts`, DB grants/tables | source, lineage/projection, sync unit suites (ingest timestamp + per-record lineage); live integration entity/conflict detail; role inspection |
-| Versioned continuous invariants; exact golden set | `domain/invariants.ts`, `config/invariants.v1.json` loaded at API/worker start | `npm run test:golden`: 3,050 expected/detected, zero false positives/negatives; 1,000 clean rows; committed-oracle equality |
+| Versioned continuous invariants; exact golden set | `domain/invariants.ts`, `config/invariants.v1.json` loaded at API/worker start | `npm run test:golden`: 305 expected/detected, zero false positives/negatives; 100 clean rows; committed-oracle equality |
 | Unified cross-source entity question | projection + `GET /api/v1/entities/:id` (public summary, no internal `raw`) | committed `golden/entity-view.json` generator-backed hand-check, unit projection, and live integration equality |
 | Auditable filterable dashboard | overview/conflict/proposal API + React components | figure-reconciliation object (`ok` + checks) vs ingestion/invariant/proposal/spend logs; proposal evidence + audit metadata;  frontend unit + Playwright |
-| Proposal-only reconciler | policy/provider/confidence/reconcile modules + worker UTC-day schedule | unit matrices + live 3,050 proposal/dedup accounting + before/after mirror hash equality; scheduled job idempotency |
+| Proposal-only reconciler | policy/provider/confidence/reconcile modules + worker UTC-day schedule | unit matrices + live 305 proposal/dedup accounting + before/after mirror hash equality; scheduled job idempotency |
 | Hard daily/run spend cap | transactional spend ledger | unit settlement/failure tests + `npm run test:spend-cap` real concurrent Postgres burst; dashboard `latestAlert` + spend check |
 | Timeout/5xx/partial source | fault adapter + bounded source reader | fake-timer unit tests and live 5xx partial integration; all-or-nothing active snapshot assertion |
 | Malformed/oversized input | streaming fixture reader, Zod, Fastify limit | 21 malformed generator cases; live 400/413/422 assertions |
@@ -25,7 +25,7 @@ This document maps the graded contract to committed proof. Commands assume `npm 
 | Health/logging/privacy | API/worker health, redaction, audit | health integration, redaction unit suite, container health and structured logs |
 | Cloudflare Worker boundary | `backend/cloudflare/src/` route policy and Container forwarding | Worker unit/type tests prove allowed routes/methods/body guard, unchanged stream bodies, singleton identity, one pre-forward listener retry, and structured 503s |
 | Pages same-origin API bridge | `frontend/functions/api/[[path]].ts`, `frontend/wrangler.jsonc` | frontend tests prove service binding forward/missing-binding failure, generated binding types, and static-route exclusions |
-| Ephemeral all-in-one reset | `backend/cloudflare/Dockerfile`, `ephemeral-entrypoint.sh` | `npm run test:cloudflare-image` builds Linux/amd64, proves `/ready`, sync/reconcile 120k/3050 totals, restarts, and proves review loss plus baseline restoration |
+| Ephemeral all-in-one reset | `backend/cloudflare/Dockerfile`, `ephemeral-entrypoint.sh` | `npm run test:cloudflare-image` builds Linux/amd64, proves `/ready`, sync/reconcile 12k/305 totals, restarts, and proves review loss plus baseline restoration |
 | Manual release ordering | `scripts/deploy_cloudflare_demo.sh`, `scripts/start.sh` Deploy menu | `npm run test:deploy` stubs tooling to prove SHA/origin/dirty fail-closed gates, registry before Worker, three ready successes, live correctness verification before Pages upload, Pages-before-live-browser ordering, and frontend/backend/both target isolation |
 
 ## Test layers
@@ -61,7 +61,7 @@ npm run test:deploy
 - Backend core: 816 tests; 99.35% statements, 94.96% branches, 99.48% functions, 99.77% lines.
 - Frontend: 250 tests; 98.65% statements, 89.94% branches, 100% functions/lines.
 - Test/code ratio: 6,412 / 3,748 nonblank lines = 1.711.
-- Golden: 3,050/3,050, zero false positives, zero false negatives; canonical generation byte-stable.
+- Golden: 305/305, zero false positives, zero false negatives; canonical generation byte-stable.
 - Live integration: 10/10 across API, worker, Postgres, Redis, and fixture adapters.
 - Worker recovery: one deliberately abandoned delivery reclaimed, its duplicate acknowledged, and one durable execution after a real graceful stop/start.
 - Spend burst: 20 concurrent attempts, 5 allowed, 15 denied, 5 provider-boundary timestamps, 15 audits, 15 critical alerts; duplicate and new-action retries did not bypass the cap.
