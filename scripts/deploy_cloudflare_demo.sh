@@ -26,6 +26,7 @@ pages_deploy_output=""
 ready_headers=""
 container_list_output=""
 container_instances_output=""
+coverage_reports_dir=""
 REQUIRED_RELEASE_EXECUTABLES=(eslint tsx tsc vite vitest wrangler playwright)
 
 # Yarn Classic exports obsolete npm configuration variables to its child
@@ -130,6 +131,7 @@ fail() {
 finish() {
   local status=$?
   rm -f "${registry_preflight:-}" "${worker_deploy_output:-}" "${pages_deploy_output:-}" "${ready_headers:-}" "${container_list_output:-}" "${container_instances_output:-}"
+  [[ -z "$coverage_reports_dir" ]] || rm -rf "$coverage_reports_dir"
   if (( status != 0 )) && [[ "$rollback_reported" != true ]]; then
     print_manual_rollback "release command failed with exit status $status"
   fi
@@ -174,7 +176,8 @@ done
 npm run seed -- --seed 424242
 npm run lint
 npm run typecheck
-npm run test:coverage
+coverage_reports_dir="$(mktemp -d "${TMPDIR:-/tmp}/gt-school-coverage.XXXXXX")"
+GT_SCHOOL_COVERAGE_REPORTS_DIR="$coverage_reports_dir" npm run test:coverage
 npm run test:ratio
 npm run test:golden
 npm run build

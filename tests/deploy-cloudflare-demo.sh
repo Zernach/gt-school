@@ -103,6 +103,15 @@ grep -q "npm ci --include=dev --include-workspace-root --ignore-scripts" "$log_f
 grep -q 'REQUIRED_RELEASE_EXECUTABLES=(eslint tsx tsc vite vitest wrangler playwright)' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 grep -q 'unset npm_config_argv' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
 grep -q "npm run seed -- --seed 424242" "$log_file"
+grep -q 'GT_SCHOOL_COVERAGE_REPORTS_DIR="$coverage_reports_dir" npm run test:coverage' "$ROOT_DIR/scripts/deploy_cloudflare_demo.sh"
+node --input-type=module - "$ROOT_DIR/package.json" <<'NODE'
+import { readFileSync } from 'node:fs';
+
+const packageJson = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+if (packageJson.scripts['test:coverage'] !== 'npm run test:coverage --workspace @keystone/api && npm run test:coverage --workspace @keystone/frontend') {
+  throw new Error('coverage_workspaces_must_run_serially');
+}
+NODE
 grep -q "npm run test:cloudflare-image" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler whoami" "$log_file"
 grep -q "wrangler run_wrangler_without_vpn npx --no-install wrangler containers images list --json" "$log_file"

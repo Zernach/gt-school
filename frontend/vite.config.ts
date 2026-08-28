@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'node:path';
+
+const coverageReportsDirectory = process.env.GT_SCHOOL_COVERAGE_REPORTS_DIR
+  ? resolve(process.env.GT_SCHOOL_COVERAGE_REPORTS_DIR, 'frontend')
+  : './coverage';
 
 export default defineConfig({
   plugins: [react()],
@@ -17,6 +22,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
+      reportsDirectory: coverageReportsDirectory,
       reporter: ['text', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/test/**'],

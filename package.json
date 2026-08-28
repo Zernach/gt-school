@@ -19,7 +19,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings=0",
     "test:unit": "npm run test:unit --workspaces --if-present",
-    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspace @keystone/api && npm run test:coverage --workspace @keystone/frontend",
     "test:ratio": "node scripts/check-test-ratio.mjs",
     "test": "npm run test:unit && npm run test:ratio && npm run test:start",
     "seed": "npm run seed --workspace @keystone/api --",

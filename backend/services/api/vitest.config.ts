@@ -1,4 +1,9 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'node:path';
+
+const coverageReportsDirectory = process.env.GT_SCHOOL_COVERAGE_REPORTS_DIR
+  ? resolve(process.env.GT_SCHOOL_COVERAGE_REPORTS_DIR, 'api')
+  : './coverage';
 
 export default defineConfig({
   test: {
@@ -8,6 +13,7 @@ export default defineConfig({
     hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
+      reportsDirectory: coverageReportsDirectory,
       reporter: ['text', 'json-summary'],
       include: [
         'src/domain/**/*.ts',
