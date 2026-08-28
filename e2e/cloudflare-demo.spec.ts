@@ -11,7 +11,8 @@ test.describe('deployed Cloudflare demo', () => {
     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
 
     const queue = page.getByRole('region', { name: 'Decide what to record' });
-    await queue.getByRole('button', { name: 'Expand Decide what to record' }).click();
+    const expandQueue = queue.getByRole('button', { name: 'Expand Decide what to record' });
+    if (await expandQueue.isVisible()) await expandQueue.click();
     const proposal = queue.getByRole('list', { name: 'Proposal results' }).getByRole('button').first();
     await expect(proposal).toBeVisible();
     await proposal.click();
