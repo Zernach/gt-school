@@ -35,7 +35,7 @@ function proposalCount(proposals: OverviewData['proposals'], status: string): nu
   return numeric(proposals.find((proposal) => proposal.status === status)?.count);
 }
 
-export function Overview({ overview }: { overview: OverviewData }) {
+export function Overview({ overview, defaultOpen = true }: { overview: OverviewData; defaultOpen?: boolean }) {
   const pending = proposalCount(overview.proposals, 'pending');
   const held = proposalCount(overview.proposals, 'held');
   const applied = proposalCount(overview.proposals, 'applied');
@@ -97,9 +97,11 @@ export function Overview({ overview }: { overview: OverviewData }) {
   return (
     <DashboardSection
       id="trust-overview-section"
+      title={dashboardStory.overview.title}
       headingId="overview-heading"
       descriptionId="overview-description"
       className="overview-section"
+      defaultOpen={defaultOpen}
       heading={
         <div className="section-heading overview-heading">
           <div>

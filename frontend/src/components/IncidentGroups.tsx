@@ -8,6 +8,7 @@ interface IncidentGroupsProps {
   groups: IncidentGroup[];
   groupedConflicts?: number | undefined;
   onPatternSelect?: (pattern: string) => void;
+  defaultOpen?: boolean;
 }
 
 function number(value: number): string {
@@ -19,7 +20,7 @@ function percent(value: number, total: number): string {
   return `${((value / total) * 100).toFixed(1)}%`;
 }
 
-export function IncidentGroups({ groups, groupedConflicts, onPatternSelect }: IncidentGroupsProps) {
+export function IncidentGroups({ groups, groupedConflicts, onPatternSelect, defaultOpen }: IncidentGroupsProps) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'members' | 'name'>('members');
   const groupedMemberCount = groups.reduce((total, group) => total + group.member_count, 0);
@@ -43,9 +44,11 @@ export function IncidentGroups({ groups, groupedConflicts, onPatternSelect }: In
   return (
     <DashboardSection
       id="incident-groups-section"
+      title={dashboardStory.groups.title}
       headingId="groups-heading"
       descriptionId="groups-description"
       className="panel-section"
+      {...(defaultOpen === undefined ? {} : { defaultOpen })}
       heading={
         <div className="section-heading">
           <div>

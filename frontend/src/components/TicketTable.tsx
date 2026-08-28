@@ -6,6 +6,7 @@ import { humanize, StatusBadge } from './StatusBadge';
 interface TicketTableProps {
   tickets: ExtractedTicket[];
   onConflict?: (id: string) => void;
+  defaultOpen?: boolean;
 }
 
 function ticketDate(value: string | null): string {
@@ -27,7 +28,7 @@ function TicketDate({ value }: { value: string | null }) {
   return value ? <time dateTime={value}>{ticketDate(value)}</time> : <span className="muted">Not recorded</span>;
 }
 
-export function TicketTable({ tickets, onConflict }: TicketTableProps) {
+export function TicketTable({ tickets, onConflict, defaultOpen }: TicketTableProps) {
   const openCount = tickets.filter((ticket) => ticket.status !== 'resolved').length;
   const linkedCount = tickets.filter((ticket) => ticket.conflict_id !== null).length;
   const missingStudentCount = tickets.filter((ticket) => ticket.student_ref === null).length;
@@ -35,9 +36,11 @@ export function TicketTable({ tickets, onConflict }: TicketTableProps) {
   return (
     <DashboardSection
       id="support-tickets-section"
+      title={dashboardStory.tickets.title}
       headingId="tickets-heading"
       descriptionId="tickets-description"
       className="panel-section"
+      {...(defaultOpen === undefined ? {} : { defaultOpen })}
       heading={
         <div className="section-heading">
           <div>

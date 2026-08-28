@@ -80,7 +80,10 @@ export function ProposalQueue({
   onStatus,
   onType,
   onSource,
-  onConflict
+  onConflict,
+  defaultOpen,
+  open,
+  onOpenChange
 }: {
   proposals: Proposal[];
   status: string;
@@ -90,6 +93,9 @@ export function ProposalQueue({
   onType?: (type: string) => void;
   onSource?: (source: string) => void;
   onConflict: (id: string) => void;
+  defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const pendingCount = proposals.filter((proposal) => proposal.status === 'pending').length;
   const heldCount = proposals.filter((proposal) => proposal.status === 'held').length;
@@ -97,9 +103,13 @@ export function ProposalQueue({
   return (
     <DashboardSection
       id="proposal-queue-section"
+      title={dashboardStory.proposals.title}
       headingId="queue-heading"
       descriptionId="queue-description"
       className="panel-section"
+      {...(defaultOpen === undefined ? {} : { defaultOpen })}
+      {...(open === undefined ? {} : { open })}
+      {...(onOpenChange === undefined ? {} : { onOpenChange })}
       heading={
         <div className="section-heading">
           <div>

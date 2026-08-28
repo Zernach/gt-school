@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
+import { Accordion } from './Accordion';
+
+export const DashboardAccordionDefaultOpen = createContext(true);
 
 interface DashboardSectionProps {
   id: string;
@@ -7,6 +10,10 @@ interface DashboardSectionProps {
   heading: ReactNode;
   children: ReactNode;
   className?: string;
+  title?: string;
+  defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function DashboardSection({
@@ -15,17 +22,23 @@ export function DashboardSection({
   descriptionId,
   heading,
   children,
-  className = ''
+  className = '',
+  title = ({
+    'overview-heading': 'Start with the evidence',
+    'conflicts-heading': 'Find the conflicts',
+    'groups-heading': 'See the bigger pattern',
+    'queue-heading': 'Decide what to record',
+    'tickets-heading': 'Add support context'
+  } as Record<string, string>)[headingId] ?? 'Section details',
+  defaultOpen,
+  open,
+  onOpenChange
 }: DashboardSectionProps) {
+  const inheritedDefaultOpen = useContext(DashboardAccordionDefaultOpen);
+  const effectiveDefaultOpen = defaultOpen ?? (headingId === 'overview-heading' ? true : inheritedDefaultOpen);
   return (
-    <section
-      id={id}
-      aria-labelledby={headingId}
-      aria-describedby={descriptionId}
-      className={`dashboard-section ${className}`.trim()}
-    >
-      {heading}
-      <div className="section-content">{children}</div>
-    </section>
+    <Accordion id={id.replace(/-section$/u, '-accordion')} title={title} headingId={headingId} {...(descriptionId === undefined ? {} : { descriptionId })} className={className} defaultOpen={effectiveDefaultOpen} {...(open === undefined ? {} : { open })} {...(onOpenChange === undefined ? {} : { onOpenChange })} heading={heading}>
+      {children}
+    </Accordion>
   );
 }
