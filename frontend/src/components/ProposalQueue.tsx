@@ -1,5 +1,5 @@
 import type { Proposal } from '../types';
-import { Accordion } from './Accordion';
+import { DashboardSection } from './DashboardSection';
 import { dashboardStory } from './dashboardStory';
 import { humanize, StatusBadge } from './StatusBadge';
 
@@ -80,10 +80,7 @@ export function ProposalQueue({
   onStatus,
   onType,
   onSource,
-  onConflict,
-  defaultOpen = true,
-  open,
-  onOpenChange
+  onConflict
 }: {
   proposals: Proposal[];
   status: string;
@@ -93,22 +90,15 @@ export function ProposalQueue({
   onType?: (type: string) => void;
   onSource?: (source: string) => void;
   onConflict: (id: string) => void;
-  defaultOpen?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }) {
   const pendingCount = proposals.filter((proposal) => proposal.status === 'pending').length;
   const heldCount = proposals.filter((proposal) => proposal.status === 'held').length;
   const sensitiveCount = proposals.filter((proposal) => proposal.sensitive_hold).length;
   return (
-    <Accordion
-      id="proposal-queue-accordion"
-      title={dashboardStory.proposals.title}
+    <DashboardSection
+      id="proposal-queue-section"
       headingId="queue-heading"
       descriptionId="queue-description"
-      defaultOpen={defaultOpen}
-      {...(open === undefined ? {} : { open })}
-      {...(onOpenChange === undefined ? {} : { onOpenChange })}
       className="panel-section"
       heading={
         <div className="section-heading">
@@ -120,16 +110,7 @@ export function ProposalQueue({
         </div>
       }
     >
-      <div className="boundary-callout" role="note" aria-label="How to review a proposal">
-        <div className="boundary-callout-lead"><span className="boundary-icon" aria-hidden="true">◎</span><div><strong>Review before you decide</strong><p>Nothing here writes to CRM, the app database, or payments. Approve, reject, or hold changes Keystone’s audit trail only.</p></div></div>
-        <ol>
-          <li>Open the full evidence and compare the source records.</li>
-          <li>Check the suggested field and value against the evidence.</li>
-          <li>Choose a decision and leave a reason another reviewer can follow.</li>
-        </ol>
-      </div>
       <div className="queue-summary" aria-label="Proposal queue summary">
-        <article className="queue-summary-card"><span>Showing</span><strong>{proposals.length}</strong><small>most recent matching proposals</small></article>
         <article className="queue-summary-card"><span>Need a decision</span><strong>{pendingCount}</strong><small>pending in this view</small></article>
         <article className="queue-summary-card"><span>Held for review</span><strong>{heldCount}</strong><small>waiting for more evidence</small></article>
         <article className="queue-summary-card"><span>Sensitive holds</span><strong>{sensitiveCount}</strong><small>cannot be approved casually</small></article>
@@ -184,6 +165,6 @@ export function ProposalQueue({
           </div>
         </li>;
       })}</ul> : <div className="empty-state compact-empty"><span aria-hidden="true">◷</span><h3>No proposals in this queue</h3><p>Reconciliation may not have run, or this filter has no matching proposals. Try another review state, issue type, or source.</p></div>}
-    </Accordion>
+    </DashboardSection>
   );
 }

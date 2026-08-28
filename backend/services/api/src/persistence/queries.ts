@@ -146,16 +146,24 @@ export async function getConflictDetail(pool: DatabasePool, tenantId: string, co
   const entityRefs = (conflict.rows[0].entity_refs as string[]) ?? [];
   const studentEntityIds = entityRefs.filter((ref) => ref.startsWith('student:')).map((ref) => `entity:${ref.slice('student:'.length)}`);
   const directSourceIds = entityRefs.map((ref) => ref.slice(ref.indexOf(':') + 1));
-  const lineage = await pool.query(`SELECT records.source_kind, records.entity_kind, records.source_id, fields.field_path, fields.raw_value,
+  const lineage = await pool.query(`WITH target_records AS MATERIALIZED (
+      SELECT records.id
+      FROM source_records records
+      JOIN active_snapshots active ON active.tenant_id = records.tenant_id AND active.source_kind = records.source_kind AND active.snapshot_id = records.snapshot_id
+      WHERE records.tenant_id = $1 AND records.source_id = ANY($2::text[])
+      UNION
+      SELECT links.source_record_id
+      FROM entity_links links
+      JOIN source_records records ON records.tenant_id = links.tenant_id AND records.id = links.source_record_id
+      JOIN active_snapshots active ON active.tenant_id = records.tenant_id AND active.source_kind = records.source_kind AND active.snapshot_id = records.snapshot_id
+      WHERE links.tenant_id = $1 AND links.canonical_entity_id = ANY($3::text[])
+    )
+    SELECT records.source_kind, records.entity_kind, records.source_id, fields.field_path, fields.raw_value,
       fields.normalized_value, fields.normalization_version, fields.transformation_trace, fields.source_observed_at, records.ingested_at
-    FROM field_observations fields
-    JOIN source_records records ON records.id = fields.source_record_id
-    JOIN active_snapshots active ON active.tenant_id = records.tenant_id AND active.source_kind = records.source_kind AND active.snapshot_id = records.snapshot_id
-    WHERE fields.tenant_id = $1 AND (
-      records.source_id = ANY($2::text[]) OR records.id IN (
-        SELECT source_record_id FROM entity_links WHERE tenant_id = $1 AND canonical_entity_id = ANY($3::text[])
-      )
-    ) ORDER BY records.source_kind, records.entity_kind, records.source_id, fields.field_path LIMIT 500`, [tenantId, directSourceIds, studentEntityIds]);
+    FROM target_records target
+    JOIN source_records records ON records.id = target.id
+    JOIN field_observations fields ON fields.tenant_id = $1 AND fields.source_record_id = target.id
+    ORDER BY records.source_kind, records.entity_kind, records.source_id, fields.field_path LIMIT 500`, [tenantId, directSourceIds, studentEntityIds]);
   const proposalId = proposal.rows[0]?.id as string | undefined;
   const audits = await pool.query(`SELECT event_type, actor, object_type, object_id, metadata, created_at FROM audit_events
     WHERE tenant_id = $1 AND (object_id = $2 OR ($3::text IS NOT NULL AND object_id = $3)) ORDER BY created_at, id`, [tenantId, conflictId, proposalId ?? null]);

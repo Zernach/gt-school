@@ -84,12 +84,14 @@ Spend rows use `bigint` integer microcents. Reservations lock day and run ledger
 
 ## Indexes
 
-- scoped source lookup and field-lineage lookup;
+- active-snapshot source lookup and canonical-link lookup; field lineage uses
+  the unique source-record/field-path key instead of a redundant tenant index;
 - GIN on conflict source arrays; raw mirrored payloads are intentionally
   unindexed because the API reaches them through source-record IDs and field
   lineage, avoiding an ingestion-time index write for arbitrary JSON queries;
 - tenant/entity/update ordering for canonical queries;
-- tenant/verdict/rule for invariant inspection;
+- a small per-run partial index for failed invariant inspection, avoiding index
+  writes for the much larger set of passing evidence;
 - dashboard conflict status/type/time ordering and the unfiltered tenant/time cursor order;
 - proposal status/confidence/time ordering plus tenant/conflict/recent lookup for the conflict-list lateral join;
 - ready-job status/next-attempt ordering;

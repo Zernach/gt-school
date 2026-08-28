@@ -288,10 +288,12 @@ export async function synchronize(pool: DatabasePool, adapters: readonly ReadOnl
   if (allComplete) {
     const fixtures = fixtureSetFromSnapshots(completeSnapshots);
     mirrorHash = sha256(completeSnapshots.flatMap(({ records }) => records.map((record) => sourcePayloadHash(record, payloadHashes))).sort().join(''));
-    await inTransaction(pool, (client) => persistProjection(client, request.tenantId, fixtures, recordIds));
     const evaluation = evaluateInvariants(fixtures, availability);
     conflictCount = evaluation.conflicts.length;
-    await persistInvariants(pool, request.tenantId, runId, request.generation, fixtures, evaluation.conflicts, availability, config.OSCILLATION_HOLD_THRESHOLD);
+    await Promise.all([
+      inTransaction(pool, (client) => persistProjection(client, request.tenantId, fixtures, recordIds)),
+      persistInvariants(pool, request.tenantId, runId, request.generation, fixtures, evaluation.conflicts, availability, config.OSCILLATION_HOLD_THRESHOLD)
+    ]);
     await inTransaction(pool, async (client) => {
       for (const sourceKind of ['crm', 'app', 'payments'] as const) {
         const snapshotId = completeSnapshotIds.get(sourceKind);

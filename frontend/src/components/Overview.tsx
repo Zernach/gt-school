@@ -1,5 +1,5 @@
 import type { OverviewData, SourceStatus } from '../types';
-import { Accordion } from './Accordion';
+import { DashboardSection } from './DashboardSection';
 import { dashboardStory } from './dashboardStory';
 import { humanize, StatusBadge } from './StatusBadge';
 
@@ -35,7 +35,7 @@ function proposalCount(proposals: OverviewData['proposals'], status: string): nu
   return numeric(proposals.find((proposal) => proposal.status === status)?.count);
 }
 
-export function Overview({ overview, defaultOpen = true }: { overview: OverviewData; defaultOpen?: boolean }) {
+export function Overview({ overview }: { overview: OverviewData }) {
   const pending = proposalCount(overview.proposals, 'pending');
   const held = proposalCount(overview.proposals, 'held');
   const applied = proposalCount(overview.proposals, 'applied');
@@ -95,12 +95,10 @@ export function Overview({ overview, defaultOpen = true }: { overview: OverviewD
   const actionLabel = pending > 0 ? `Review ${number(pending)} pending proposal${pending === 1 ? '' : 's'}` : overview.conflicts.active !== '0' ? 'Inspect active conflicts' : 'Open conflict evidence';
 
   return (
-    <Accordion
-      id="trust-overview-accordion"
-      title={dashboardStory.overview.title}
+    <DashboardSection
+      id="trust-overview-section"
       headingId="overview-heading"
       descriptionId="overview-description"
-      defaultOpen={defaultOpen}
       className="overview-section"
       heading={
         <div className="section-heading overview-heading">
@@ -176,6 +174,6 @@ export function Overview({ overview, defaultOpen = true }: { overview: OverviewD
         )) : <p className="empty-inline">No complete source snapshot is active yet.</p>}
       </div>
       </div>
-    </Accordion>
+    </DashboardSection>
   );
 }

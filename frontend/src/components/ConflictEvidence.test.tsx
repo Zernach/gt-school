@@ -8,11 +8,8 @@ import { EMPTY_FILTERS } from './ConflictTable';
 describe('conflict evidence workspace', () => {
   it('explains the evidence, summarizes the run, and gives a review path', () => {
     render(<ConflictEvidence overview={overviewFixture()} filters={EMPTY_FILTERS} visibleCount={2} hasNextPage={true} disabled={false} onPreset={vi.fn()} />);
-    const summary = screen.getByRole('group', { name: 'Invariant evidence summary' });
-    expect(within(summary).getByText('3,050')).toBeInTheDocument();
-    expect(within(summary).getByText('Evidence gaps')).toBeInTheDocument();
-    expect(within(summary).getByText('3,049')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Turn a repeatable failure into a safe decision' })).toBeInTheDocument();
+    const status = screen.getByRole('status', { name: 'Invariant evidence status' });
+    expect(within(status).getByText(/3,050 deterministic rule failures/u)).toBeInTheDocument();
     expect(screen.getByText(/Unchecked is not clean/u)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Results summary' })).toHaveTextContent('2 conflicts on this page · more results available');
   });

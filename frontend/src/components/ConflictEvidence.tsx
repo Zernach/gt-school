@@ -17,11 +17,6 @@ function count(value: number | undefined): string {
   return value === undefined ? '—' : value.toLocaleString('en-US');
 }
 
-function pendingCount(overview: OverviewData | null): number | undefined {
-  if (!overview) return undefined;
-  return overview.proposals.find(({ status }) => status === 'pending')?.count ?? 0;
-}
-
 function presetSelected(preset: ConflictPreset, filters: ConflictFilters): boolean {
   const sharedFiltersEmpty = filters.type === '' && filters.source === '' && filters.minimumConfidence === '' && filters.from === '';
   if (preset === 'active') return sharedFiltersEmpty && filters.status === 'active' && filters.proposalStatus === '';
@@ -64,48 +59,15 @@ function runStatus(overview: OverviewData | null): { status: string; label: stri
 }
 
 export function ConflictEvidence({ overview, filters, visibleCount, hasNextPage, disabled, onPreset }: ConflictEvidenceProps) {
-  const invariant = overview?.invariant;
-  const summary = invariant?.summary;
-  const pending = pendingCount(overview);
   const status = runStatus(overview);
 
   return (
     <>
-      <div className="conflict-summary" role="group" aria-label="Invariant evidence summary">
-        <article className="conflict-summary-card">
-          <span>Failed checks</span>
-          <strong>{count(summary?.fail)}</strong>
-          <small>repeatable rule failures in this run</small>
-        </article>
-        <article className="conflict-summary-card">
-          <span>Evidence gaps</span>
-          <strong>{count(summary?.unchecked)}</strong>
-          <small>checks skipped because source data was unavailable</small>
-        </article>
-        <article className="conflict-summary-card">
-          <span>Pending review</span>
-          <strong>{count(pending)}</strong>
-          <small>proposals waiting for a reviewer decision</small>
-        </article>
+      <div className="evidence-status" role="status" aria-label="Invariant evidence status">
+        <StatusBadge status={status.status} label={status.label} />
+        <p>{status.message}</p>
+        <p className="muted">Unchecked is not clean: unavailable source evidence never counts as a pass.</p>
       </div>
-
-      <aside className="evidence-guide" aria-labelledby="conflict-guide-heading">
-        <div className="evidence-guide-intro">
-          <p className="eyebrow">How to use this evidence</p>
-          <h3 id="conflict-guide-heading">Turn a repeatable failure into a safe decision</h3>
-          <p>These results come from versioned rules applied to the active source snapshot. They are explainable checks, not predictions or source-system edits.</p>
-        </div>
-        <ol>
-          <li><strong>Find the work.</strong> Use a shortcut or filter to narrow by failure, source, status, or proposal state.</li>
-          <li><strong>Verify the reason.</strong> Open a row to compare exact source values, normalized values, and field lineage.</li>
-          <li><strong>Decide deliberately.</strong> Review the proposal evidence and audit history; only a reviewer decision changes Keystone’s proposal state.</li>
-        </ol>
-        <div className="evidence-guide-status">
-          <StatusBadge status={status.status} label={status.label} />
-          <p>{status.message}</p>
-          <p className="muted">Unchecked is not clean: unavailable source evidence never counts as a pass. Source systems remain read-only.</p>
-        </div>
-      </aside>
 
       <div className="review-shortcuts" role="group" aria-label="Review shortcuts">
         <div>

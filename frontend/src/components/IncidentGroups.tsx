@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { IncidentGroup } from '../types';
-import { Accordion } from './Accordion';
+import { DashboardSection } from './DashboardSection';
 import { dashboardStory } from './dashboardStory';
 import { humanize, StatusBadge } from './StatusBadge';
 
@@ -8,7 +8,6 @@ interface IncidentGroupsProps {
   groups: IncidentGroup[];
   groupedConflicts?: number | undefined;
   onPatternSelect?: (pattern: string) => void;
-  defaultOpen?: boolean;
 }
 
 function number(value: number): string {
@@ -20,7 +19,7 @@ function percent(value: number, total: number): string {
   return `${((value / total) * 100).toFixed(1)}%`;
 }
 
-export function IncidentGroups({ groups, groupedConflicts, onPatternSelect, defaultOpen = true }: IncidentGroupsProps) {
+export function IncidentGroups({ groups, groupedConflicts, onPatternSelect }: IncidentGroupsProps) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<'members' | 'name'>('members');
   const groupedMemberCount = groups.reduce((total, group) => total + group.member_count, 0);
@@ -42,12 +41,10 @@ export function IncidentGroups({ groups, groupedConflicts, onPatternSelect, defa
       : '';
 
   return (
-    <Accordion
-      id="incident-groups-accordion"
-      title={dashboardStory.groups.title}
+    <DashboardSection
+      id="incident-groups-section"
       headingId="groups-heading"
       descriptionId="groups-description"
-      defaultOpen={defaultOpen}
       className="panel-section"
       heading={
         <div className="section-heading">
@@ -119,6 +116,6 @@ export function IncidentGroups({ groups, groupedConflicts, onPatternSelect, defa
           <p>Run the stretch job after reconciliation to cluster related failures.</p>
         </div>
       )}
-    </Accordion>
+    </DashboardSection>
   );
 }

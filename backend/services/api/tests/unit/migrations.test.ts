@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sha256 } from '../../src/domain/stable.js';
@@ -75,6 +75,19 @@ describe('checksum-verified forward migrations', () => {
     await expect(runMigrations(harness.pool, migrationsRoot)).rejects.toThrow('syntax error');
     expect(clientQuery.mock.calls.map(([sql]) => sql)).toEqual(['BEGIN', 'BROKEN SQL;\n', 'ROLLBACK']);
     expect(harness.release).toHaveBeenCalledOnce();
+  });
+});
+
+describe('ingestion query indexes', () => {
+  it('removes write-heavy redundant indexes and adds narrow read-path replacements', async () => {
+    const sql = await readFile(new URL('../../../database/migrations/005_ingestion_query_indexes.sql', import.meta.url), 'utf8');
+    expect(sql).toContain('DROP INDEX IF EXISTS field_observations_record_idx');
+    expect(sql).toContain('DROP INDEX IF EXISTS invariant_results_verdict_idx');
+    expect(sql).toContain('CREATE INDEX source_records_scope_lookup_idx');
+    expect(sql).toContain('CREATE INDEX entity_links_canonical_lookup_idx');
+    expect(sql).toContain('CREATE INDEX invariant_results_fail_run_idx');
+    expect(sql).toContain("WHERE verdict = 'fail'");
+    expect(sql).not.toContain('field_observations_source_record_id_field_path_key');
   });
 });
 

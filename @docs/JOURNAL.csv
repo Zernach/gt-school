@@ -952,3 +952,8 @@ Clarified feature-demo problem/benefit narration,"we need the @docs/script/1-fea
 
 $gt-school-stakeholder-scripts",2026-08-27T18:59:18-0400,unavailable,unavailable
 Refined narrator-led problem descriptions,"dont spell out ""Problem it solves:"", just make the problem's description naturally flow from the narrator's personality",2026-08-27T19:18:18-0400,unavailable,unavailable
+Repaired repeated GitHub CI ingestion failure,"We need all github CI tests to pass
+
+$debug-remote-git-workflows",2026-08-27T19:41:13-0400,unavailable,1080
+Slimmed accordion-heavy dashboard into visible action sections,"There are far too many accordions. We need to slim it down, so it is more actionable and not so much repeating data. Simple is better, because it condenses more features seemlessly.",2026-08-27T19:49:47-0400,unavailable,unavailable
+Updated feature walkthrough for visible review flow,"update the @docs/script/1-features.md script accordiongly",2026-08-27T20:01:25-0400,unavailable,unavailable

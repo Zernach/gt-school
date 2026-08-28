@@ -1,12 +1,11 @@
 import type { ExtractedTicket } from '../types';
-import { Accordion } from './Accordion';
+import { DashboardSection } from './DashboardSection';
 import { dashboardStory } from './dashboardStory';
 import { humanize, StatusBadge } from './StatusBadge';
 
 interface TicketTableProps {
   tickets: ExtractedTicket[];
   onConflict?: (id: string) => void;
-  defaultOpen?: boolean;
 }
 
 function ticketDate(value: string | null): string {
@@ -28,18 +27,16 @@ function TicketDate({ value }: { value: string | null }) {
   return value ? <time dateTime={value}>{ticketDate(value)}</time> : <span className="muted">Not recorded</span>;
 }
 
-export function TicketTable({ tickets, onConflict, defaultOpen = true }: TicketTableProps) {
+export function TicketTable({ tickets, onConflict }: TicketTableProps) {
   const openCount = tickets.filter((ticket) => ticket.status !== 'resolved').length;
   const linkedCount = tickets.filter((ticket) => ticket.conflict_id !== null).length;
   const missingStudentCount = tickets.filter((ticket) => ticket.student_ref === null).length;
 
   return (
-    <Accordion
-      id="support-tickets-accordion"
-      title={dashboardStory.tickets.title}
+    <DashboardSection
+      id="support-tickets-section"
       headingId="tickets-heading"
       descriptionId="tickets-description"
-      defaultOpen={defaultOpen}
       className="panel-section"
       heading={
         <div className="section-heading">
@@ -59,19 +56,6 @@ export function TicketTable({ tickets, onConflict, defaultOpen = true }: TicketT
             <div className="ticket-summary-card"><span>Linked conflicts</span><strong>{linkedCount.toLocaleString('en-US')}</strong><small>can open invariant evidence</small></div>
             <div className="ticket-summary-card"><span>Missing student reference</span><strong>{missingStudentCount.toLocaleString('en-US')}</strong><small>check the source record manually</small></div>
           </div>
-
-          <aside className="ticket-guide" aria-labelledby="ticket-guide-heading">
-            <div>
-              <p className="eyebrow">Triage guide</p>
-              <h3 id="ticket-guide-heading">Move from request to evidence</h3>
-            </div>
-            <ol>
-              <li>Start with the status and requested action.</li>
-              <li>Confirm the student, family, system, and record references.</li>
-              <li>Open the linked conflict to inspect lineage and make a guarded proposal decision.</li>
-            </ol>
-            <p className="ticket-guide-note">Review is read-only until a reviewer explicitly decides a proposal. Keystone never writes back to source systems.</p>
-          </aside>
 
           <div className="table-scroll ticket-table" tabIndex={0} aria-label="Scrollable extracted support tickets">
           <table>
@@ -138,6 +122,6 @@ export function TicketTable({ tickets, onConflict, defaultOpen = true }: TicketT
           <p>The stretch extraction has not produced any rows yet. Run the stretch extraction job, then refresh this page.</p>
         </div>
       )}
-    </Accordion>
+    </DashboardSection>
   );
 }

@@ -188,7 +188,9 @@ describe('conflict and entity detail', () => {
       incidentGroup: { id: 'incgrp_one' },
       tickets: [{ id: 'ticket-1' }]
     });
+    expect(query.mock.calls[2]?.[0]).toContain('WITH target_records AS MATERIALIZED');
     expect(query.mock.calls[2]?.[0]).toContain('JOIN active_snapshots active');
+    expect(query.mock.calls[2]?.[0]).toContain('fields.source_record_id = target.id');
     expect(query.mock.calls[2]?.[1]).toEqual([tenantId, ['student-1', 'payment-1'], ['entity:student-1']]);
     expect(query.mock.calls[3]?.[1]).toEqual([tenantId, 'conflict-1', 'proposal-1']);
   });

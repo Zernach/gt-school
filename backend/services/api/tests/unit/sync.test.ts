@@ -16,6 +16,7 @@ interface PersistedRecord {
 }
 
 interface PoolOptions {
+  beforeQuery?: (sql: string) => Promise<void> | void;
   existing?: { status: string; summary: SyncResult };
   omitPersisted?: (record: PersistedRecord) => boolean;
   omitIngestedAt?: boolean;
@@ -29,6 +30,7 @@ function makePool(options: PoolOptions = {}) {
   let nextId = 1;
   const handle = async (sql: string, parameters?: readonly unknown[]) => {
     statements.push({ sql, parameters });
+    await options.beforeQuery?.(sql);
     const failure = options.failQuery?.(sql);
     if (failure) throw failure;
     if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') return { rows: [], rowCount: 0 };
@@ -159,6 +161,27 @@ describe('complete sync', () => {
       expect(source.readSnapshot).toHaveBeenCalledOnce();
       expect(source.readSnapshot).toHaveBeenCalledWith(3, expect.any(AbortSignal));
     }
+  });
+
+  it('persists canonical projection and invariant evidence concurrently before activation', async () => {
+    let releaseProjection!: () => void;
+    const projectionGate = new Promise<void>((resolve) => { releaseProjection = resolve; });
+    let invariantPersistenceStarted = false;
+    const { pool, statements } = makePool({
+      beforeQuery: async (sql) => {
+        if (sql.includes('INSERT INTO canonical_entities')) await projectionGate;
+        if (sql.includes('INSERT INTO invariant_runs')) invariantPersistenceStarted = true;
+      }
+    });
+    const run = synchronize(pool, cleanAdapters(), config, request);
+    try {
+      await vi.waitFor(() => expect(invariantPersistenceStarted).toBe(true));
+      expect(statements.some(({ sql }) => sql.includes('INSERT INTO active_snapshots'))).toBe(false);
+    } finally {
+      releaseProjection();
+    }
+    await expect(run).resolves.toMatchObject({ status: 'complete' });
+    expect(statements.filter(({ sql }) => sql.includes('INSERT INTO active_snapshots'))).toHaveLength(3);
   });
 
   it('persists a running sync before reading a source', async () => {
