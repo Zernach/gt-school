@@ -21,6 +21,7 @@ async function loadDashboard(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Find the conflicts' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Decide what to record' })).toBeVisible();
   await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>('button[aria-label="Expand Start with the evidence"]')?.click();
     document.querySelector<HTMLButtonElement>('button[aria-label="Expand Find the conflicts"]')?.click();
     document.querySelector<HTMLButtonElement>('button[aria-label="Expand Decide what to record"]')?.click();
   });

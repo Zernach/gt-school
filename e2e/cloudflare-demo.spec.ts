@@ -10,6 +10,8 @@ test.describe('deployed Cloudflare demo', () => {
     await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
     const skipIntro = page.getByRole('button', { name: 'Skip intro' });
     if (await skipIntro.isVisible()) await skipIntro.click();
+    const expandOverview = page.getByRole('button', { name: 'Expand Start with the evidence' });
+    if (await expandOverview.isVisible()) await expandOverview.click();
     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
 
     const queue = page.getByRole('region', { name: 'Decide what to record' });

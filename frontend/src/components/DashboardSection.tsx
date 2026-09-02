@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Accordion } from './Accordion';
 
-export const DashboardAccordionDefaultOpen = createContext(true);
+export const DashboardAccordionDefaultOpen = createContext(false);
 
 interface DashboardSectionProps {
   id: string;
@@ -35,7 +35,7 @@ export function DashboardSection({
   onOpenChange
 }: DashboardSectionProps) {
   const inheritedDefaultOpen = useContext(DashboardAccordionDefaultOpen);
-  const effectiveDefaultOpen = defaultOpen ?? (headingId === 'overview-heading' ? true : inheritedDefaultOpen);
+  const effectiveDefaultOpen = defaultOpen ?? inheritedDefaultOpen;
   return (
     <Accordion id={id.replace(/-section$/u, '-accordion')} title={title} headingId={headingId} {...(descriptionId === undefined ? {} : { descriptionId })} className={className} defaultOpen={effectiveDefaultOpen} {...(open === undefined ? {} : { open })} {...(onOpenChange === undefined ? {} : { onOpenChange })} heading={heading}>
       {children}

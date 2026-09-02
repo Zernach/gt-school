@@ -35,7 +35,7 @@ function proposalCount(proposals: OverviewData['proposals'], status: string): nu
   return numeric(proposals.find((proposal) => proposal.status === status)?.count);
 }
 
-export function Overview({ overview, defaultOpen = true }: { overview: OverviewData; defaultOpen?: boolean }) {
+export function Overview({ overview, defaultOpen = false }: { overview: OverviewData; defaultOpen?: boolean }) {
   const pending = proposalCount(overview.proposals, 'pending');
   const held = proposalCount(overview.proposals, 'held');
   const applied = proposalCount(overview.proposals, 'applied');

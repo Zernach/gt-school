@@ -978,3 +978,7 @@ add this image to top of readme with a link to the video
 
 https://drive.google.com/drive/folders/1vYyzeiYaBPl1WWg25xiLa8yBl6ovI8Je?usp=drive_link",2026-08-27T22:09:35-04:00,unavailable,unavailable
 Add first-visit onboarding spotlight hero,"invest in a highly engaging + informative onboarding. no user creation is needed, and this onboarding spotlight hero animated banner should exist on the home screen (above the 5 accordions and below the sticky header), make it gorgeous + do not repeat for same user, so keep local cache populated with memory of whether or not the user has seen the onboarding intro",2026-08-31T22:44:10-04:00,unavailable,unavailable
+Close all home accordions at start,"all accordions should begin closed, including:
+
+01 · Orient
+Start with the evidence",2026-09-01T21:12:03-04:00,unavailable,240

@@ -72,14 +72,14 @@ describe('dashboard shell', () => {
     expect(screen.getByText('Evidence connected').querySelector('.status-symbol')).toHaveTextContent('✓');
   });
 
-  it('opens only the first accordion at startup', async () => {
+  it('keeps every accordion closed at startup', async () => {
     render(<App />);
     await screen.findByRole('heading', { name: 'Start with the evidence' });
     await screen.findByRole('heading', { name: 'Add support context' });
-    expect(screen.getByRole('button', { name: 'Collapse Start with the evidence' })).toHaveAttribute('aria-expanded', 'true');
-    for (const title of ['Find the conflicts', 'See the bigger pattern', 'Decide what to record', 'Add support context']) {
+    for (const title of ['Start with the evidence', 'Find the conflicts', 'See the bigger pattern', 'Decide what to record', 'Add support context']) {
       expect(screen.getByRole('button', { name: `Expand ${title}` })).toHaveAttribute('aria-expanded', 'false');
     }
+    expect(document.getElementById('trust-overview-accordion-panel')).toHaveAttribute('hidden');
     expect(document.getElementById('conflict-evidence-accordion-panel')).toHaveAttribute('hidden');
   });
 
@@ -142,7 +142,7 @@ describe('first-visit onboarding spotlight', () => {
     expect(header).toBeInstanceOf(HTMLElement);
     expect(intro.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(header && header.compareDocumentPosition(intro) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(screen.getByRole('button', { name: 'Collapse Start with the evidence' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Start with the evidence' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand Find the conflicts' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand See the bigger pattern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand Decide what to record' })).toBeInTheDocument();
@@ -304,7 +304,9 @@ describe('partial-source evidence', () => {
 describe('overview failure and retry', () => {
   it('renders a request-correlated API error', async () => {
     mockedGetOverview.mockRejectedValue(new ApiError(503, 'degraded', 'A source is unavailable.', 'request-overview'));
+    const user = userEvent.setup();
     render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Start with the evidence' }));
     const panel = await screen.findByRole('alert');
     expect(within(panel).getByRole('heading', { name: 'Overview unavailable' })).toBeInTheDocument();
     expect(within(panel).getByText('A source is unavailable. Request request-overview.')).toBeInTheDocument();
@@ -342,6 +344,7 @@ describe('overview failure and retry', () => {
     const user = userEvent.setup();
     mockedGetOverview.mockRejectedValueOnce(new Error('First overview failure')).mockResolvedValueOnce(overviewFixture());
     render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Start with the evidence' }));
     await user.click(await screen.findByRole('button', { name: 'Retry overview' }));
     expect(await screen.findByRole('heading', { name: 'Start with the evidence' })).toBeInTheDocument();
     expect(mockedGetOverview).toHaveBeenCalledTimes(2);
@@ -620,7 +623,9 @@ describe('dashboard accessibility', () => {
 
   it('has no detectable accessibility violations in an error state', async () => {
     mockedGetOverview.mockRejectedValue(new ApiError(503, 'degraded', 'A source is unavailable.', 'request-a11y'));
+    const user = userEvent.setup();
     const { container } = render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Expand Start with the evidence' }));
     await screen.findByRole('heading', { name: 'Overview unavailable' });
     expect((await axe(container)).violations).toEqual([]);
   });

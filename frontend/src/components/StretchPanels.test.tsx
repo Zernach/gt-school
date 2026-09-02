@@ -32,7 +32,7 @@ const ticket = {
 describe('incident groups', () => {
   it('renders clustered patterns with member counts', () => {
     const onPatternSelect = vi.fn();
-    render(<IncidentGroups groups={[group]} groupedConflicts={12} onPatternSelect={onPatternSelect} />);
+    render(<IncidentGroups defaultOpen groups={[group]} groupedConflicts={12} onPatternSelect={onPatternSelect} />);
     expect(screen.getByRole('heading', { name: 'See the bigger pattern' })).toBeInTheDocument();
     expect(screen.getAllByText('Paid But No Deal')).not.toHaveLength(0);
     expect(screen.getAllByText('12')).not.toHaveLength(0);
@@ -44,7 +44,7 @@ describe('incident groups', () => {
   });
 
   it('supports finding a pattern by label or ID', () => {
-    render(<IncidentGroups groups={[group, { ...group, id: 'incgrp_other', label: 'other_issue', member_count: 5, nearest_group_id: null }]} />);
+    render(<IncidentGroups defaultOpen groups={[group, { ...group, id: 'incgrp_other', label: 'other_issue', member_count: 5, nearest_group_id: null }]} />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'Find a pattern' }), { target: { value: 'other_issue' } });
     expect(screen.getByRole('row', { name: /Other Issue.*incgrp_other/u })).toBeInTheDocument();
     expect(screen.queryByRole('row', { name: /Paid But No Deal.*incgrp_paid/u })).not.toBeInTheDocument();
@@ -52,12 +52,12 @@ describe('incident groups', () => {
   });
 
   it('shows an empty state when grouping has not run', () => {
-    render(<IncidentGroups groups={[]} />);
+    render(<IncidentGroups defaultOpen groups={[]} />);
     expect(screen.getByRole('heading', { name: 'No incident groups yet' })).toBeInTheDocument();
   });
 
   it('has no detectable accessibility violations', async () => {
-    const { container } = render(<IncidentGroups groups={[group]} />);
+    const { container } = render(<IncidentGroups defaultOpen groups={[group]} />);
     expect((await axe(container)).violations).toEqual([]);
   });
 });
@@ -65,7 +65,7 @@ describe('incident groups', () => {
 describe('extracted tickets', () => {
   it('explains the fields, summarizes triage, and renders review action', () => {
     const onConflict = vi.fn();
-    render(<TicketTable tickets={[ticket]} onConflict={onConflict} />);
+    render(<TicketTable defaultOpen tickets={[ticket]} onConflict={onConflict} />);
     expect(screen.getByRole('heading', { name: 'Add support context' })).toBeInTheDocument();
     expect(screen.getByText(/Connect each request to its student/u)).toBeInTheDocument();
     expect(screen.getByText('student:11111111-1111-4111-8111-111111111111')).toBeInTheDocument();
@@ -80,13 +80,13 @@ describe('extracted tickets', () => {
   });
 
   it('shows an empty extraction state', () => {
-    render(<TicketTable tickets={[]} />);
+    render(<TicketTable defaultOpen tickets={[]} />);
     expect(screen.getByRole('heading', { name: 'No tickets in this evidence window' })).toBeInTheDocument();
     expect(screen.getByText(/Run the stretch extraction job/u)).toBeInTheDocument();
   });
 
   it('keeps absent references explicit and gives unlinked tickets a manual next step', () => {
-    render(<TicketTable tickets={[{ ...ticket, id: 'ticket-unlinked', conflict_id: null, student_ref: null, family_ref: null, record_id: null, status: 'resolved', resolution: 'closed', resolved_at: '2026-01-16T12:00:00.000Z' }]} />);
+    render(<TicketTable defaultOpen tickets={[{ ...ticket, id: 'ticket-unlinked', conflict_id: null, student_ref: null, family_ref: null, record_id: null, status: 'resolved', resolution: 'closed', resolved_at: '2026-01-16T12:00:00.000Z' }]} />);
     expect(screen.getByText('No reference extracted')).toBeInTheDocument();
     expect(screen.getAllByText('Not recorded').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('No linked conflict; triage manually.')).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('extracted tickets', () => {
   });
 
   it('has no detectable accessibility violations', async () => {
-    const { container } = render(<TicketTable tickets={[ticket]} />);
+    const { container } = render(<TicketTable defaultOpen tickets={[ticket]} />);
     expect((await axe(container)).violations).toEqual([]);
   });
 });
