@@ -11,12 +11,14 @@ test.describe('deployed Cloudflare demo', () => {
     const skipIntro = page.getByRole('button', { name: 'Skip intro' });
     if (await skipIntro.isVisible()) await skipIntro.click();
     const expandOverview = page.getByRole('button', { name: 'Expand Start with the evidence' });
-    if (await expandOverview.isVisible()) await expandOverview.click();
+    await expect(expandOverview).toBeVisible();
+    await expandOverview.click();
     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
 
     const queue = page.getByRole('region', { name: 'Decide what to record' });
     const expandQueue = queue.getByRole('button', { name: 'Expand Decide what to record' });
-    if (await expandQueue.isVisible()) await expandQueue.click();
+    await expect(expandQueue).toBeVisible();
+    await expandQueue.click();
     const proposal = queue.getByRole('list', { name: 'Proposal results' }).getByRole('button').first();
     await expect(proposal).toBeVisible();
     await proposal.click();

@@ -983,3 +983,187 @@ Close all home accordions at start,"all accordions should begin closed, includin
 01 · Orient
 Start with the evidence",2026-09-01T21:12:03-04:00,unavailable,240
 Isolate onboarding animation rendering,"the onboarding animations are beautiful, but the are causing re-renders to the header and consuming too much compute. Refer to zernach.com's background animated dna as an example: /Users/zernach/code/archlife-apps-frontends/zernach",2026-09-01T23:24:08-04:00,unavailable,unavailable
+Harden Pages post-deploy accordion test,"──────────────────────────────────────────────
+Getting User settings...
+👋 You are logged in with an OAuth Token, associated with the email ryan@zernach.com.
+🔐 Credentials are stored in: /Users/zernach/Library/Preferences/.wrangler/config/default.toml
+┌────────────────────────────┬──────────────────────────────────┐
+│ Account Name               │ Account ID                       │
+├────────────────────────────┼──────────────────────────────────┤
+│ Ryan@zernach.com's Account │ d126dc430ddb332739110606b90e7cb8 │
+└────────────────────────────┴──────────────────────────────────┘
+🔓 Token Permissions:
+Scope (Access)
+- account (read)
+- user (read)
+- workers (write)
+- workers_kv (write)
+- workers_routes (write)
+- workers_scripts (write)
+- workers_tail (read)
+- d1 (write)
+- pages (write)
+- zone (read)
+- ssl_certs (write)
+- ai (write)
+- ai-search (write)
+- ai-search (run)
+- websearch.run 
+- agent-memory (write)
+- queues (write)
+- pipelines (write)
+- secrets_store (write)
+- artifacts (write)
+- flagship (write)
+- containers (write)
+- cloudchamber (write)
+- connectivity (admin)
+- email_routing (write)
+- email_sending (write)
+- browser (write)
+- challenge-widgets.write 
+- offline_access 
+runWithoutVpn: default route is already en0; no VPN default route detected.
+
+ ⛅️ wrangler 4.125.0 (update available 4.128.0)
+───────────────────────────────────────────────
+✨ Compiled Worker successfully
+Uploading... (9/15)
+Uploading... (11/15)
+Uploading... (13/15)
+Uploading... (15/15)
+✨ Success! Uploaded 6 files (9 already uploaded) (1.86 sec)
+
+✨ Uploading _headers
+✨ Uploading Functions bundle
+✨ Uploading _routes.json
+🌎 Deploying...
+✨ Deployment complete! Take a peek over at https://f12edc11.gt-school.pages.dev
+
+> keystone-reconciliation@1.0.0 test:e2e
+> playwright test
+
+
+Running 16 tests using 1 worker
+
+  ✘   1 …yed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard (10.9s)
+  ✓   2 …:3 › production dashboard › loads the real evidence window with security headers and bounded layout (1.9s)
+  ✓   3 …ec.ts:68:3 › production dashboard › supports skip navigation and keyboard-operable evidence filters (2.7s)
+  ✓   4 …3 › production dashboard › opens an auditable modal, traps focus, and restores the invoking control (2.5s)
+  ✓   5 …3 › production dashboard › has no automated WCAG A or AA violations in the loaded and detail states (5.1s)
+  ✓   6 ….spec.ts:130:3 › production dashboard › keeps all review controls usable at the configured viewport (1.0s)
+  ✓   7 …ding spotlight › shows an informative hero above the accordions, then remembers skip in local cache (1.1s)
+  ✓   8 …pec.ts:170:3 › first-visit onboarding spotlight › keeps the intro banner inside the viewport width (489ms)
+  ✘   9 …yed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard (10.8s)
+  ✓  10 …:3 › production dashboard › loads the real evidence window with security headers and bounded layout (1.1s)
+  ✓  11 …ec.ts:68:3 › production dashboard › supports skip navigation and keyboard-operable evidence filters (2.8s)
+  ✓  12 …3 › production dashboard › opens an auditable modal, traps focus, and restores the invoking control (2.3s)
+  ✓  13 …3 › production dashboard › has no automated WCAG A or AA violations in the loaded and detail states (5.0s)
+  ✓  14 ….spec.ts:130:3 › production dashboard › keeps all review controls usable at the configured viewport (1.1s)
+  ✓  15 …ding spotlight › shows an informative hero above the accordions, then remembers skip in local cache (1.1s)
+  ✓  16 …pec.ts:170:3 › first-visit onboarding spotlight › keeps the intro banner inside the viewport width (753ms)
+
+
+  1) [desktop-chromium] › e2e/cloudflare-demo.spec.ts:8:3 › deployed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByText('Active conflicts').locator('..').getByText('305')
+    Expected: visible
+    Received: hidden
+    Timeout:  10000ms
+
+    Call log:
+      - Expect ""toBeVisible"" with timeout 10000ms
+      - waiting for getByText('Active conflicts').locator('..').getByText('305')
+        19 × locator resolved to <strong>305</strong>
+           - unexpected value ""hidden""
+
+
+      13 |     const expandOverview = page.getByRole('button', { name: 'Expand Start with the evidence' });
+      14 |     if (await expandOverview.isVisible()) await expandOverview.click();
+    > 15 |     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
+         |                                                                                     ^
+      16 |
+      17 |     const queue = page.getByRole('region', { name: 'Decide what to record' });
+      18 |     const expandQueue = queue.getByRole('button', { name: 'Expand Decide what to record' });
+        at /Users/zernach/code/gt-school/e2e/cloudflare-demo.spec.ts:15:85
+
+    attachment #1: screenshot (image/png) ─────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-desktop-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-desktop-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-desktop-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-desktop-chromium/trace.zip
+    Usage:
+
+        yarn playwright show-trace test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-desktop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [narrow-chromium] › e2e/cloudflare-demo.spec.ts:8:3 › deployed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByText('Active conflicts').locator('..').getByText('305')
+    Expected: visible
+    Received: hidden
+    Timeout:  10000ms
+
+    Call log:
+      - Expect ""toBeVisible"" with timeout 10000ms
+      - waiting for getByText('Active conflicts').locator('..').getByText('305')
+        20 × locator resolved to <strong>305</strong>
+           - unexpected value ""hidden""
+
+
+      13 |     const expandOverview = page.getByRole('button', { name: 'Expand Start with the evidence' });
+      14 |     if (await expandOverview.isVisible()) await expandOverview.click();
+    > 15 |     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
+         |                                                                                     ^
+      16 |
+      17 |     const queue = page.getByRole('region', { name: 'Decide what to record' });
+      18 |     const expandQueue = queue.getByRole('button', { name: 'Expand Decide what to record' });
+        at /Users/zernach/code/gt-school/e2e/cloudflare-demo.spec.ts:15:85
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-narrow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-narrow-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-narrow-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-narrow-chromium/trace.zip
+    Usage:
+
+        yarn playwright show-trace test-results/playwright/cloudflare-demo-deployed-C-f9e90-sal-hold-from-the-dashboard-narrow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [desktop-chromium] › e2e/cloudflare-demo.spec.ts:8:3 › deployed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard 
+    [narrow-chromium] › e2e/cloudflare-demo.spec.ts:8:3 › deployed Cloudflare demo › loads through the Pages proxy and records a proposal hold from the dashboard 
+  14 passed (52.4s)
+
+To open last HTML report run:
+
+  yarn playwright show-report
+
+Cloudflare demo release stopped: release command failed with exit status 1
+Worker: gt-school-demo-api; uploaded version: not-deployed; Pages project: gt-school; uploaded deployment: https://f12edc11.gt-school.pages.dev; source SHA: 55cfdf000b1859f1027a8ed37351c39dcf49b1a4.
+If the Worker upload completed, immediately restore its preceding active version with:
+  (cd ""/Users/zernach/code/gt-school/backend/cloudflare"" && npx --no-install wrangler rollback --name ""gt-school-demo-api"" --message ""manual rollback after failed gt-school demo release"")
+If the Pages upload completed, use Workers & Pages > gt-school > Deployments > the prior production deployment > Rollback to this deployment. Pages Direct Upload has no Wrangler rollback command.
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+zernach@Ryans-MacBook-Pro-485 gt-school %",2026-09-01T23:37:40-04:00,unavailable,unavailable
