@@ -4,6 +4,8 @@ import { axe } from 'vitest-axe';
 import App from './App';
 import { ApiError, decideProposal, getConflict, getConflicts, getIncidentGroups, getOverview, getProposals, getTickets } from './api';
 import { conflictDetailFixture, conflictListFixture, overviewFixture, proposalFixture } from './test/fixtures';
+import { clearOnboardingIntroMemory, rememberOnboardingIntro } from './onboardingMemory';
+import { onboardingIntroSteps } from './onboardingStory';
 import type * as ApiModule from './api';
 
 vi.mock('./api', async (importOriginal) => {
@@ -36,6 +38,7 @@ beforeEach(() => {
   mockedGetIncidentGroups.mockReset().mockResolvedValue([]);
   mockedGetTickets.mockReset().mockResolvedValue([]);
   mockedDecideProposal.mockReset().mockResolvedValue(proposalFixture({ status: 'held', version: 2 }));
+  rememberOnboardingIntro('completed');
 });
 
 async function renderLoadedApp() {
@@ -123,6 +126,51 @@ describe('dashboard shell', () => {
     expect(proposalSignal?.aborted).toBe(true);
     expect(groupSignal?.aborted).toBe(true);
     expect(ticketSignal?.aborted).toBe(true);
+  });
+});
+
+describe('first-visit onboarding spotlight', () => {
+  beforeEach(() => {
+    clearOnboardingIntroMemory();
+  });
+
+  it('places the intro banner below the sticky header and above the five accordions', async () => {
+    render(<App />);
+    const intro = await screen.findByRole('region', { name: 'Keystone intro' });
+    const header = document.querySelector('.site-header');
+    const overview = await screen.findByRole('heading', { name: 'Start with the evidence' });
+    expect(header).toBeInstanceOf(HTMLElement);
+    expect(intro.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(header && header.compareDocumentPosition(intro) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByRole('button', { name: 'Collapse Start with the evidence' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Find the conflicts' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand See the bigger pattern' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Decide what to record' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand Add support context' })).toBeInTheDocument();
+  });
+
+  it('stays visible while the demo backend is still starting', () => {
+    mockedGetOverview.mockReturnValue(new Promise(() => undefined));
+    render(<App />);
+    expect(screen.getByRole('region', { name: 'Keystone intro' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Starting demo backend' })).toBeInTheDocument();
+  });
+
+  it('does not render the intro when this browser already saw it', async () => {
+    rememberOnboardingIntro('dismissed');
+    await renderLoadedApp();
+    expect(screen.queryByRole('button', { name: 'Skip intro' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: onboardingIntroSteps[0]!.title })).not.toBeInTheDocument();
+  });
+
+  it('keeps the intro dismissed after skip and remount', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Skip intro' }));
+    unmount();
+    render(<App />);
+    await screen.findByRole('heading', { name: 'Start with the evidence' });
+    expect(screen.queryByRole('button', { name: 'Skip intro' })).not.toBeInTheDocument();
   });
 });
 

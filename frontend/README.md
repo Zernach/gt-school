@@ -5,6 +5,7 @@ The React/Vite dashboard is a human review surface, not a source editor. It pres
 ## Design and accessibility contract
 
 - Geist typography, deep-space surfaces, Arctic Cyan and Royal Purple named tokens.
+- A first-visit onboarding spotlight hero sits below the sticky header and above the five home-screen accordions. It explains the review path without creating an account. Skip or completion writes `localStorage` key `keystone.onboarding.intro.seen.v1` so the same browser does not see the intro again.
 - Semantic headings, tables, fieldsets, labels, machine-readable times, and live announcements.
 - Status always includes text and a symbol; color is supplemental.
 - Minimum 44px controls, visible focus, WCAG AA contrast, reduced-motion support, and internal table scrolling.

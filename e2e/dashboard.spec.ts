@@ -1,7 +1,19 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { ONBOARDING_INTRO_STORAGE_KEY } from '../frontend/src/onboardingMemory';
+
+async function suppressOnboarding(page: Page): Promise<void> {
+  await page.addInitScript((key: string) => {
+    window.localStorage.setItem(key, JSON.stringify({
+      seen: true,
+      seenAt: '2026-01-15T12:00:00.000Z',
+      outcome: 'completed'
+    }));
+  }, ONBOARDING_INTRO_STORAGE_KEY);
+}
 
 async function loadDashboard(page: Page): Promise<void> {
+  await suppressOnboarding(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
   await expect(page.getByText('Evidence connected')).toBeVisible();
@@ -126,5 +138,37 @@ test.describe('production dashboard', () => {
     await expect(filters.getByRole('combobox', { name: 'Minimum confidence' })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Review state' })).toBeVisible();
     expect(await page.evaluate(() => document.body.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
+});
+
+test.describe('first-visit onboarding spotlight', () => {
+  test('shows an informative hero above the accordions, then remembers skip in local cache', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
+    const intro = page.getByRole('region', { name: 'Keystone intro' });
+    await expect(intro).toBeVisible();
+    await expect(intro).toContainText('You do not create an account');
+    const headerBox = await page.locator('.site-header').boundingBox();
+    const introBox = await intro.boundingBox();
+    const overviewBox = await page.getByRole('heading', { name: 'Start with the evidence' }).boundingBox();
+    expect(headerBox && introBox && overviewBox).toBeTruthy();
+    expect(headerBox!.y).toBeLessThan(introBox!.y);
+    expect(introBox!.y).toBeLessThan(overviewBox!.y);
+
+    await intro.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByRole('heading', { name: 'Begin with what is verified' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip intro' }).click();
+    await expect(intro).toHaveCount(0);
+    expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').seen, ONBOARDING_INTRO_STORAGE_KEY)).toBe(true);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Start with the evidence' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip intro' })).toHaveCount(0);
+  });
+
+  test('keeps the intro banner inside the viewport width', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('region', { name: 'Keystone intro' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 });

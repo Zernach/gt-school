@@ -38,6 +38,88 @@ button:disabled { cursor: not-allowed; opacity: 0.55; }
 .gt-school-logo { display: block; width: 150px; height: auto; flex: 0 0 auto; }
 .header-state { min-width: 0; margin-left: auto; }
 main { width: min(1500px, calc(100% - 2rem)); margin: 0 auto; padding: clamp(1rem, 3vw, 2.25rem) 0 4rem; }
+main:focus { outline: none; }
+main:focus-visible { outline: 2px solid var(--color-accent-arctic-cyan); outline-offset: 4px; }
+
+.onboarding-spotlight {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  padding: clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.5rem) clamp(1rem, 2.2vw, 1.35rem);
+  padding-right: 3.75rem;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(0, 229, 255, 0.16), transparent 18rem),
+    radial-gradient(circle at 92% 8%, rgba(120, 81, 169, 0.3), transparent 20rem),
+    linear-gradient(155deg, rgba(19, 29, 46, 0.98), rgba(8, 12, 22, 0.96));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(0, 229, 255, 0.14);
+}
+.onboarding-spotlight-frame { display: grid; grid-template-columns: minmax(14rem, 0.9fr) minmax(18rem, 1.2fr); gap: clamp(0.85rem, 2.5vw, 1.75rem); align-items: center; }
+.onboarding-stage { position: relative; display: grid; place-items: center; min-height: 14.5rem; }
+.onboarding-aurora, .onboarding-starfield { position: absolute; pointer-events: none; }
+.onboarding-aurora { inset: -38% -12%; background: conic-gradient(from 130deg, rgba(0, 229, 255, 0.2), transparent 28%, rgba(120, 81, 169, 0.32), transparent 68%, rgba(0, 229, 255, 0.14)); filter: blur(22px); animation: onboarding-aurora 24s linear infinite; }
+.onboarding-starfield {
+  inset: 8% 8% 22%;
+  background-image:
+    radial-gradient(1.4px 1.4px at 14% 22%, rgba(238, 247, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 28% 68%, rgba(0, 229, 255, 0.72), transparent),
+    radial-gradient(1.2px 1.2px at 46% 18%, rgba(216, 194, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 62% 54%, rgba(238, 247, 255, 0.62), transparent),
+    radial-gradient(1.5px 1.5px at 78% 30%, rgba(0, 229, 255, 0.78), transparent),
+    radial-gradient(1px 1px at 88% 72%, rgba(216, 194, 255, 0.7), transparent);
+  animation: onboarding-twinkle 4.8s ease-in-out infinite;
+}
+.onboarding-constellation { position: relative; z-index: 1; display: grid; justify-items: center; gap: 0.35rem; width: 100%; }
+.onboarding-hub { position: relative; display: grid; place-items: center; width: 11.5rem; height: 8.75rem; }
+.onboarding-beam, .onboarding-orbits { position: absolute; pointer-events: none; }
+.onboarding-beam {
+  inset: 8% 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.46), rgba(120, 81, 169, 0.12) 58%, transparent 72%);
+  filter: blur(8px);
+  transition: opacity 0.4s ease, transform 0.7s ease;
+}
+.onboarding-spotlight[data-step="hub"] .onboarding-beam { opacity: 1; }
+.onboarding-spotlight:not([data-step="hub"]) .onboarding-beam { opacity: 0.35; }
+.onboarding-orbits { left: 50%; top: 50%; width: 15.5rem; height: auto; margin: -4.35rem 0 0 -7.75rem; overflow: visible; animation: onboarding-spin 28s linear infinite; transform-origin: center; }
+.onboarding-orbit { fill: none; stroke: url(#onboarding-orbit-ring); stroke-width: 1.15; opacity: 0.58; }
+.onboarding-gem, .onboarding-satellite { display: grid; justify-items: center; min-width: 44px; min-height: 44px; padding: 0.2rem; border: 0; background: transparent; }
+.onboarding-gem { position: relative; z-index: 1; gap: 0.45rem; color: var(--color-text-primary); }
+.onboarding-gem-core {
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, #7af4ff 0%, var(--color-accent-arctic-cyan) 42%, var(--color-accent-royal-purple) 100%);
+  box-shadow: 0 0 34px rgba(0, 229, 255, 0.38), inset 0 0 14px rgba(255, 255, 255, 0.28);
+  transform: rotate(45deg);
+  animation: onboarding-pulse 3.4s ease-in-out infinite;
+}
+.onboarding-gem.is-active .onboarding-gem-core { box-shadow: 0 0 42px rgba(0, 229, 255, 0.58), 0 0 12px rgba(155, 118, 209, 0.55), inset 0 0 14px rgba(255, 255, 255, 0.32); }
+.onboarding-gem-label, .onboarding-satellite-label { font-size: 0.68rem; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; }
+.onboarding-gem-label { color: var(--color-accent-arctic-cyan); }
+.onboarding-satellites { display: grid; grid-template-columns: repeat(5, minmax(44px, 1fr)); gap: 0.3rem; width: min(100%, 28rem); margin: 0; padding: 0; list-style: none; }
+.onboarding-satellite { gap: 0.35rem; width: 100%; color: var(--color-text-secondary); }
+.onboarding-satellite-node { width: 0.82rem; height: 0.82rem; border: 1px solid rgba(174, 189, 208, 0.55); border-radius: 50%; background: rgba(24, 36, 58, 0.92); }
+.onboarding-satellite.is-seen .onboarding-satellite-node { border-color: var(--color-accent-royal-purple); background: var(--color-accent-royal-purple); }
+.onboarding-satellite.is-active { color: var(--color-text-primary); }
+.onboarding-satellite.is-active .onboarding-satellite-node { width: 1.05rem; height: 1.05rem; border-color: var(--color-accent-arctic-cyan); background: var(--color-accent-arctic-cyan); box-shadow: 0 0 16px rgba(0, 229, 255, 0.58); }
+.onboarding-dismiss { position: absolute; top: 0.85rem; right: 0.85rem; z-index: 2; }
+.onboarding-summary { max-width: 62ch; margin: 0.55rem 0 0.85rem; color: var(--color-text-secondary); line-height: 1.5; }
+.onboarding-facts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.onboarding-facts li { position: relative; flex: 1 1 13.5rem; padding: 0.45rem 0.7rem 0.45rem 1.45rem; border: 1px solid rgba(49, 65, 92, 0.82); border-radius: 0.7rem; background: rgba(7, 11, 20, 0.42); font-size: 0.82rem; line-height: 1.4; }
+.onboarding-facts li::before { content: ''; position: absolute; left: 0.62rem; top: 0.78rem; width: 0.38rem; height: 0.38rem; border-radius: 50%; background: var(--color-accent-arctic-cyan); }
+.onboarding-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem; }
+.onboarding-progress { margin: 0 auto 0 0; color: var(--color-text-secondary); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+
+@keyframes onboarding-aurora { to { transform: rotate(360deg); } }
+@keyframes onboarding-spin { to { transform: rotate(-360deg); } }
+@keyframes onboarding-twinkle { 50% { opacity: 0.45; } }
+@keyframes onboarding-pulse {
+  0%, 100% { transform: rotate(45deg) scale(1); }
+  50% { transform: rotate(45deg) scale(1.06); }
+}
 h2, h3 { margin: 0; letter-spacing: -0.02em; }
 h2 { font-size: clamp(1.35rem, 3vw, 1.85rem); }
 h3 { font-size: 1.05rem; }
@@ -265,12 +347,24 @@ footer { padding: 1.5rem; border-top: 1px solid var(--color-border); color: var(
 }
 
 @media (max-width: 800px) {
+  .onboarding-spotlight-frame { grid-template-columns: 1fr; }
+  .onboarding-stage { min-height: 11.5rem; }
+  .onboarding-hub { width: 9.5rem; height: 7.4rem; }
+  .onboarding-orbits { width: 13rem; margin: -3.65rem 0 0 -6.5rem; }
+  .onboarding-spotlight { padding-right: clamp(1rem, 2.2vw, 1.5rem); padding-top: 3.25rem; }
   .review-shortcuts { grid-template-columns: 1fr 1fr; }
   .review-shortcuts > div { grid-column: 1 / -1; }
 }
 
 @media (max-width: 640px) {
   main { width: min(100% - 1rem, 1500px); }
+  .onboarding-spotlight h2 { font-size: clamp(1.2rem, 5.5vw, 1.45rem); }
+  .onboarding-gem-label { font-size: 0.62rem; }
+  .onboarding-satellite-label { font-size: 0.58rem; letter-spacing: 0.04em; }
+  .onboarding-facts li { flex-basis: 100%; border-radius: 0.65rem; }
+  .onboarding-controls .onboarding-progress { flex-basis: 100%; margin: 0 0 0.15rem; }
+  .onboarding-controls .secondary-button { flex: 1 1 calc(50% - 0.55rem); }
+  .onboarding-controls .primary-button { flex-basis: 100%; }
   .site-header { padding-inline: 0.75rem; }
   .site-header p { display: none; }
   .gt-school-logo { width: 102px; }

@@ -6,6 +6,7 @@ import { ConflictFiltersForm, ConflictTable, EMPTY_FILTERS } from './components/
 import { dashboardStory } from './components/dashboardStory';
 import { DashboardAccordionDefaultOpen, DashboardSection } from './components/DashboardSection';
 import { IncidentGroups } from './components/IncidentGroups';
+import { OnboardingSpotlight } from './components/OnboardingSpotlight';
 import { Overview } from './components/Overview';
 import { ProposalQueue } from './components/ProposalQueue';
 import { StatusBadge } from './components/StatusBadge';
@@ -143,7 +144,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header"><img className="gt-school-logo" src="/gt-school-logo.png" alt="GT School" /><div><p>Reconciliation trust layer</p><h1>Keystone</h1></div><div className="header-state"><StatusBadge status={overview.error ? 'failed' : bootstrapPhase !== 'open' || overview.loading ? 'pending' : 'complete'} label={overview.error ? 'API unavailable' : bootstrapPhase === 'restoring' ? 'Restoring demo data' : bootstrapPhase === 'checking' ? 'Starting backend' : overview.loading ? 'Refreshing evidence' : 'Evidence connected'} /></div></header>
-      <main id="main-content">
+      <main id="main-content" tabIndex={-1}>
+        <OnboardingSpotlight />
         <DashboardAccordionDefaultOpen.Provider value={false}>
         <p className="sr-only" aria-live="polite">{announcement}</p>
         {bootstrapPhase !== 'open' ? <section className="loading-panel bootstrap-loading" role="status" aria-live="polite" aria-busy="true"><span className="spinner" aria-hidden="true" /><h2>{bootstrapPhase === 'restoring' ? 'Restoring demo data' : 'Starting demo backend'}</h2><p>{bootstrapPhase === 'restoring' ? 'The transient backend reset, so Keystone is rebuilding the transient backend and its canonical synthetic evidence for this demo. This can take up to 2 minutes. One moment, please—the page will refresh automatically.' : 'Connecting to the transient backend and checking its evidence baseline…'}</p></section> : <>
