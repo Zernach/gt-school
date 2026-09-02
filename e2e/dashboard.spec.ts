@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { ONBOARDING_INTRO_STORAGE_KEY } from '../frontend/src/onboardingMemory';
 
+const liveDemo = process.env.CLOUDFLARE_DEMO_LIVE === '1';
+const coldStartTimeoutMs = 150_000;
+
 async function suppressOnboarding(page: Page): Promise<void> {
   await page.addInitScript((key: string) => {
     window.localStorage.setItem(key, JSON.stringify({
@@ -16,7 +19,7 @@ async function loadDashboard(page: Page): Promise<void> {
   await suppressOnboarding(page);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Keystone', level: 1 })).toBeVisible();
-  await expect(page.getByText('Evidence connected')).toBeVisible();
+  await expect(page.getByText('Evidence connected')).toBeVisible({ timeout: liveDemo ? coldStartTimeoutMs : 10_000 });
   await expect(page.getByRole('heading', { name: 'Start with the evidence' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Find the conflicts' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Decide what to record' })).toBeVisible();
@@ -30,16 +33,35 @@ async function loadDashboard(page: Page): Promise<void> {
 test.describe('production dashboard', () => {
   let consoleErrors: string[];
   let pageErrors: string[];
+  let transientOverviewResponses: Promise<boolean>[];
+
+  test.describe.configure({ timeout: liveDemo ? 180_000 : 30_000 });
 
   test.beforeEach(async ({ page }) => {
     consoleErrors = [];
     pageErrors = [];
+    transientOverviewResponses = [];
     page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('response', (response) => {
+      if (response.status() !== 503 || new URL(response.url()).pathname !== '/api/v1/overview') return;
+      transientOverviewResponses.push(response.json()
+        .then((body: unknown) => typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'object' && body.error !== null && 'code' in body.error && (body.error.code === 'bootstrap_in_progress' || body.error.code === 'backend_unavailable'))
+        .catch(() => false));
+    });
   });
 
-  test.afterEach(() => {
-    expect(consoleErrors, 'the production bundle must not emit console errors').toEqual([]);
+  test.afterEach(async () => {
+    const transientResponseCount = (await Promise.all(transientOverviewResponses)).filter(Boolean).length;
+    let remainingTransientErrors = transientResponseCount;
+    const unexpectedConsoleErrors = consoleErrors.filter((message) => {
+      if (remainingTransientErrors > 0 && message === 'Failed to load resource: the server responded with a status of 503 ()') {
+        remainingTransientErrors -= 1;
+        return false;
+      }
+      return true;
+    });
+    expect(unexpectedConsoleErrors, 'the production bundle must not emit unexpected console errors').toEqual([]);
     expect(pageErrors, 'the production bundle must not emit uncaught page errors').toEqual([]);
   });
 

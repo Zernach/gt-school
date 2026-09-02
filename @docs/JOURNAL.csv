@@ -1167,3 +1167,7 @@ If the Pages upload completed, use Workers & Pages > gt-school > Deployments > t
 error Command failed with exit code 1.
 info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
 zernach@Ryans-MacBook-Pro-485 gt-school %",2026-09-01T23:37:40-04:00,unavailable,unavailable
+Harden cold-start Pages acceptance,"still broken
+
+
+Cloudflare Pages release reached the post-upload Playwright gate, where the first desktop browser observed the expected transient 503 restoration responses and timed out before the dashboard became ready; later narrow-browser checks passed after the ephemeral backend finished bootstrapping.",2026-09-02T11:27:28-04:00,unavailable,unavailable

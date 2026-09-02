@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 const liveDemo = process.env.CLOUDFLARE_DEMO_LIVE === '1';
+const coldStartTimeoutMs = 150_000;
 
 test.describe('deployed Cloudflare demo', () => {
+  test.describe.configure({ timeout: liveDemo ? 180_000 : 30_000 });
   test.skip(!liveDemo, 'This proof is run only by the post-deploy Cloudflare release gate.');
 
   test('loads through the Pages proxy and records a proposal hold from the dashboard', async ({ page }) => {
@@ -11,7 +13,7 @@ test.describe('deployed Cloudflare demo', () => {
     const skipIntro = page.getByRole('button', { name: 'Skip intro' });
     if (await skipIntro.isVisible()) await skipIntro.click();
     const expandOverview = page.getByRole('button', { name: 'Expand Start with the evidence' });
-    await expect(expandOverview).toBeVisible();
+    await expect(expandOverview).toBeVisible({ timeout: coldStartTimeoutMs });
     await expandOverview.click();
     await expect(page.getByText('Active conflicts').locator('..').getByText('305')).toBeVisible();
 
