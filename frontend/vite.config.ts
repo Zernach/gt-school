@@ -25,7 +25,7 @@ export default defineConfig({
       reportsDirectory: coverageReportsDirectory,
       reporter: ['text', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx', 'src/test/**'],
+      exclude: ['src/main.tsx', 'src/test/**', 'src/**/*.worker.ts'],
       thresholds: { lines: 80, functions: 80, statements: 80, branches: 75 }
     }
   }

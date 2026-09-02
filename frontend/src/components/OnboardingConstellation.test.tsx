@@ -12,6 +12,7 @@ describe('OnboardingConstellation', () => {
     expect(screen.getByRole('button', { name: `${onboardingIntroSteps[0]!.title}, step 1 of 6` })).not.toHaveAttribute('aria-current');
     expect(screen.getByText('Evidence')).toBeInTheDocument();
     expect(screen.getByText('Support')).toBeInTheDocument();
+    expect(document.querySelector('canvas.onboarding-ambient-canvas')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('notifies its owner when the hub or a satellite is chosen', async () => {

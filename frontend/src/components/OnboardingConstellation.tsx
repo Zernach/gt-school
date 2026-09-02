@@ -1,4 +1,5 @@
 import { onboardingIntroSteps, onboardingSatellites } from '../onboardingStory';
+import { OnboardingAmbientCanvas } from './OnboardingAmbientCanvas';
 
 interface OnboardingConstellationProps {
   activeIndex: number;
@@ -11,8 +12,7 @@ export function OnboardingConstellation({ activeIndex, onSelect }: OnboardingCon
 
   return (
     <div className="onboarding-stage">
-      <div className="onboarding-aurora" aria-hidden="true" />
-      <div className="onboarding-starfield" aria-hidden="true" />
+      <OnboardingAmbientCanvas />
       <div className="onboarding-constellation" role="group" aria-label="Intro map">
         <div className="onboarding-hub">
           <div className="onboarding-beam" data-target={onboardingIntroSteps[activeIndex]?.target ?? 'hub'} aria-hidden="true" />

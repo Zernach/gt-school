@@ -982,3 +982,4 @@ Close all home accordions at start,"all accordions should begin closed, includin
 
 01 · Orient
 Start with the evidence",2026-09-01T21:12:03-04:00,unavailable,240
+Isolate onboarding animation rendering,"the onboarding animations are beautiful, but the are causing re-renders to the header and consuming too much compute. Refer to zernach.com's background animated dna as an example: /Users/zernach/code/archlife-apps-frontends/zernach",2026-09-01T23:24:08-04:00,unavailable,unavailable

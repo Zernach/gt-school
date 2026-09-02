@@ -9,7 +9,7 @@ import { IncidentGroups } from './components/IncidentGroups';
 import { OnboardingSpotlight } from './components/OnboardingSpotlight';
 import { Overview } from './components/Overview';
 import { ProposalQueue } from './components/ProposalQueue';
-import { StatusBadge } from './components/StatusBadge';
+import { SiteHeader } from './components/SiteHeader';
 import { TicketTable } from './components/TicketTable';
 import type { ConflictDetail as ConflictDetailType, ConflictFilters, ConflictList, ExtractedTicket, IncidentGroup, OverviewData, Proposal } from './types';
 
@@ -140,10 +140,12 @@ export default function App() {
     });
   };
   const decided = (proposal: Proposal) => { setAnnouncement(`Proposal ${proposal.status}. Source systems remain unchanged.`); retry(); };
+  const headerStatus = overview.error ? 'failed' : bootstrapPhase !== 'open' || overview.loading ? 'pending' : 'complete';
+  const headerLabel = overview.error ? 'API unavailable' : bootstrapPhase === 'restoring' ? 'Restoring demo data' : bootstrapPhase === 'checking' ? 'Starting backend' : overview.loading ? 'Refreshing evidence' : 'Evidence connected';
 
   return (
     <div className="app-shell">
-      <header className="site-header"><img className="gt-school-logo" src="/gt-school-logo.png" alt="GT School" /><div><p>Reconciliation trust layer</p><h1>Keystone</h1></div><div className="header-state"><StatusBadge status={overview.error ? 'failed' : bootstrapPhase !== 'open' || overview.loading ? 'pending' : 'complete'} label={overview.error ? 'API unavailable' : bootstrapPhase === 'restoring' ? 'Restoring demo data' : bootstrapPhase === 'checking' ? 'Starting backend' : overview.loading ? 'Refreshing evidence' : 'Evidence connected'} /></div></header>
+      <SiteHeader status={headerStatus} label={headerLabel} />
       <main id="main-content" tabIndex={-1}>
         <OnboardingSpotlight />
         <DashboardAccordionDefaultOpen.Provider value={false}>
